@@ -1,0 +1,12 @@
+-- hint: shuffle
+
+database({
+  dist(X: integer, Y: integer)
+}).
+
+cc(A,mmin<A>) <- dist(A,_).
+cc(C,mmin<B>) <- cc(A,B), dist(A,C).
+cc2(A,min<B>) <- cc(A,B).
+concomp(countd<A>) <- cc2(_,A).
+
+query concomp(Z).

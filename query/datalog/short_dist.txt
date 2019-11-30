@@ -1,0 +1,11 @@
+-- hint: shuffle
+
+database({
+  dist(X: integer, Y: integer, D: integer)
+}).
+
+
+path(X,Y,mmin<D>) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+query shortestpaths(X,Y,D).

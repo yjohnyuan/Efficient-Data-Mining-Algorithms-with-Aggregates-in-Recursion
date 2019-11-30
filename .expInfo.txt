@@ -1,0 +1,2931 @@
+
+====== 11/27 05:05:57 tc_ll/arc=arc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 7779 ms
+
+RamSQL Parse: 208 ms
+WITH recursive tc (A, B)
+AS  (SELECT A, B FROM arc)
+UNION
+(SELECT tc.A, arc.B FROM tc, arc WHERE tc.B = arc.A)
+SELECT A, B FROM tc
+
+RamSQL Analyze: 376 ms
+RamSQL Optimize: 115 ms
+RamSQL Generate rules of `tc`: 628 ms
+
+RamSQL Analyze: 7 ms
+RamSQL Optimize: 3 ms
+RamSQL Generate rules of outermost query: 22 ms
+
+== Datalog ObjectText ==
+database({arc(A: integer, B: integer)}).
+tc(A0, B1) <- arc(A0, B1).
+tc(G11, B1) <- tc(G11, G10), arc(G10, B1).
+result(A6, B7) <- tc(A6, B7).
+
+== Datalog Query ==
+result(A6, B7).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_ff_ff(A6, B7), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_ff_ff(A6, B7), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(tc_ff_ff(A6, B7), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(tc_ff_ff(G11, G10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(tc_ff_ff(A6, B7), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(tc_ff, binding: ff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(tc_ff_ff(A0, B1), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(arc_ff_ff(A0, B1), #Children: 1, predicateType: BASE)
+        arc(A:integer, B:integer)
+     Recursive Rules:
+      PCGAndNode(tc_ff_ff(G11, B1), rule#: 2, #Children: 2, predicateType: DERIVED)
+       PCGOrNode(tc_ff_ff(G11, G10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(arc_bf_bf(G10, B1), #Children: 1, predicateType: BASE)
+        arc(A:integer, B:integer)
+   End Clique 1
+== Operator Program ==
+
+0: tc(Var_1, Var_2) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: arc(A, B) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G11, B) <PROJECT>
+  2: (0.G10 = 1.A) <JOIN>
+   3: tc(G11, G10) <RECURSIVE_RELATION>
+   3: arc(A, B) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias tc
++- 'Project [unresolvedalias('tc1.G11 AS Var_1#22, None), unresolvedalias('arc2.B AS Var_2#23, None)]
+   +- 'Recursion tc, [Driver], [1, 0]
+      :- 'UnresolvedRelation `arc`
+      +- 'Project ['tc1.G11, 'arc2.B]
+         +- 'Join Inner, ('tc1.G10 = 'arc2.A)
+            :- SubqueryAlias tc1
+            :  +- LinearRecursiveRelation tc, [G11#20, G10#21], [1, 0]
+            +- 'CacheHint
+               +- 'SubqueryAlias arc2
+                  +- 'Project [*]
+                     +- 'UnresolvedRelation `arc`
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int
+SubqueryAlias tc
++- Project [G11#20 AS Var_1#22, B#1 AS Var_2#23]
+   +- Recursion tc, [Driver], [1, 0]
+      :- SubqueryAlias arc
+      :  +- LogicalRDD [A#0, B#1]
+      +- Project [G11#20, B#1]
+         +- Join Inner, (G10#21 = A#0)
+            :- SubqueryAlias tc1
+            :  +- LinearRecursiveRelation tc, [G11#20, G10#21], [1, 0]
+            +- CacheHint
+               +- SubqueryAlias arc2
+                  +- Project [A#0, B#1]
+                     +- SubqueryAlias arc
+                        +- LogicalRDD [A#0, B#1]
+
+== Optimized Logical Plan ==
+Project [G11#20 AS Var_1#22, B#1 AS Var_2#23]
++- Recursion tc, [Driver], [1, 0]
+   :- LogicalRDD [A#0, B#1]
+   +- Project [G11#20, B#1]
+      +- Join Inner, (G10#21 = A#0)
+         :- LinearRecursiveRelation tc, [G11#20, G10#21], [1, 0]
+         +- CacheHint
+            +- Project [A#0, B#1]
+               +- LogicalRDD [A#0, B#1]
+
+== Physical Plan ==
+*Project [G11#20 AS Var_1#22, B#1 AS Var_2#23]
++- Recursion [G11#20,B#1] (Driver) [tc][1,0]
+   :- ExitExchange tc, hashpartitioning(A#0, 3)
+   :  +- Scan ExistingRDD[A#0,B#1]
+   +- RecExchange tc, false, hashpartitioning(G11#20, 3)
+      +- *Project [G11#20, B#1]
+         +- *CacheBuildSideShuffleHashJoin [G10#21], [A#0], Inner, BuildRight
+            :- Exchange hashpartitioning(G10#21, 3)
+            :  +- *LinearRecursiveRelation [G11#20,G10#21](tc)
+            +- Exchange hashpartitioning(A#0, 3)
+               +- *Project [A#0, B#1]
+                  +- Scan ExistingRDD[A#0,B#1]
+
+Recursive Iterations: 414 ms
+[Success - Execution Finished]
+Compile RamSQL: 2187 ms
+Execution (Collect): 4743 ms
+Total: 14783 ms
+Result Size: 11
+
+====== 11/27 05:06:12 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error ======
+
+Load: 86 ms
+
+RamSQL Parse: 17 ms
+WITH recursive reach (Node)
+AS  (SELECT 1)
+UNION
+(SELECT rc.B FROM reach, rc
+WHERE reach.Node = rc.A)
+SELECT Node FROM reach
+
+RamSQL Analyze: 31 ms
+RamSQL Optimize: 17 ms
+RamSQL Generate rules of `reach`: 62 ms
+
+RamSQL Analyze: 7 ms
+RamSQL Optimize: 3 ms
+RamSQL Generate rules of outermost query: 14 ms
+
+== Datalog ObjectText ==
+database({rc(A: integer, B: integer)}).
+reach(C031) <- C031 = 1.
+reach(B25) <- reach(G33), rc(G33, B25).
+result(Node30) <- reach(Node30).
+
+== Datalog Query ==
+result(Node30).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_f_f(Node30), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_f_f(Node30), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(reach_f_f(Node30), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(reach_f_f(G33), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(reach_f_f(Node30), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(reach_f, binding: f, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(reach_f_f(C031), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(C031 =_fb_fb 1, #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+     Recursive Rules:
+      PCGAndNode(reach_f_f(B25), rule#: 2, #Children: 2, predicateType: DERIVED)
+       PCGOrNode(reach_f_f(G33), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(rc_bf_bf(G33, B25), #Children: 1, predicateType: BASE)
+        rc(A:integer, B:integer)
+   End Clique 1
+== Operator Program ==
+
+0: reach(Var_1) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: C031 = 1 <ASSIGNMENT>
+Recursive Rules: 
+ 1: (B) <PROJECT>
+  2: (0.G33 = 1.A) <JOIN>
+   3: reach(G33) <RECURSIVE_RELATION>
+   3: rc(A, B) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias reach
++- 'Project [unresolvedalias('rc.B AS Var_1#42, None)]
+   +- 'Recursion reach, [Driver], [1]
+      :- LocalRelation [C031#40]
+      +- 'Project ['rc.B]
+         +- 'Join Inner, ('reach1.G33 = 'rc.A)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G33#41], [1]
+            +- 'CacheHint
+               +- 'UnresolvedRelation `rc`
+
+== Analyzed Logical Plan ==
+Var_1: int
+SubqueryAlias reach
++- Project [B#25 AS Var_1#42]
+   +- Recursion reach, [Driver], [1]
+      :- LocalRelation [C031#40]
+      +- Project [B#25]
+         +- Join Inner, (G33#41 = A#24)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G33#41], [1]
+            +- CacheHint
+               +- SubqueryAlias rc
+                  +- LogicalRDD [A#24, B#25]
+
+== Optimized Logical Plan ==
+Project [B#25 AS Var_1#42]
++- Recursion reach, [Driver], [1]
+   :- LocalRelation [C031#40]
+   +- Project [B#25]
+      +- Join Inner, (G33#41 = A#24)
+         :- LinearRecursiveRelation reach, [G33#41], [1]
+         +- CacheHint
+            +- LogicalRDD [A#24, B#25]
+
+== Physical Plan ==
+*Project [B#25 AS Var_1#42]
++- Recursion [B#25] (Driver) [reach][1]
+   :- ExitExchange reach, hashpartitioning(C031#40, 3)
+   :  +- LocalTableScan [C031#40]
+   +- RecExchange reach, false, hashpartitioning(B#25, 3)
+      +- *Project [B#25]
+         +- *CacheBuildSideShuffleHashJoin [G33#41], [A#24], Inner, BuildRight
+            :- *LinearRecursiveRelation [G33#41](reach)
+            +- Exchange hashpartitioning(A#24, 3)
+               +- Scan ExistingRDD[A#24,B#25]
+
+Recursive Iterations: 198 ms
+[Success - Execution Finished]
+Compile RamSQL: 325 ms
+Execution (Collect): 986 ms
+Total: 1423 ms
+Result Size: 5
+
+====== 11/27 06:22:33 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3892 ms
+
+== Datalog ObjectText ==
+database({dist(A: integer, B: integer, DI: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D>) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(A,B,C).
+
+====== 11/27 06:25:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3650 ms
+
+== Datalog ObjectText ==
+database({dist(A: integer, B: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D>) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:27:07 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3935 ms
+
+== Datalog ObjectText ==
+database({dist(A: integer, B: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D>) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:28:08 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3758 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+   dist(X:integer, Y:integer, D:integer)
+== Operator Program ==
+
+0: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias dist
++- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 323 ms
+Execution (Collect): 1488 ms
+Total: 5574 ms
+Result Size: 15
+
+====== 11/27 06:28:32 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3888 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D>) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:30:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4219 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,D) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+ Clique 1
+  Parents: 
+   1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   2) PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+  Clique Predicates: 
+  1) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+   Exit Rules:
+    PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+     PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+      dist(X:integer, Y:integer, D:integer)
+   Recursive Rules:
+    PCGAndNode(path_fff_fff(X, Y, D), rule#: 2, #Children: 3, predicateType: DERIVED)
+     PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(D =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+ End Clique 1
+== Operator Program ==
+
+0: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: dist(X, Y, D) <BASE_RELATION>
+Recursive Rules: 
+ 1: (X, Y, D1 + D2 as D) <PROJECT>
+  2: (0.Z = 1.Z) <JOIN>
+   3: path(X, Z, D1) <RECURSIVE_RELATION>
+   3: path(Z, Y, D2) <RECURSIVE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias path
++- 'Project [unresolvedalias('path1.X AS Var_1#23, None), unresolvedalias('path2.Y AS Var_2#24, None), unresolvedalias('D1 AS Var_3#25, None)]
+   +- 'Recursion path, [Driver], [1, 0, 0]
+      :- 'UnresolvedRelation `dist`
+      +- 'Project ['path1.X, 'path2.Y, unresolvedalias(('path1.D1 + 'path2.D2) AS D1#22, None)]
+         +- 'Join Inner, ('path1.Z = 'path2.Z)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int, Var_3: int
+SubqueryAlias path
++- Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
+   +- Recursion path, [Driver], [1, 0, 0]
+      :- SubqueryAlias dist
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- Join Inner, (Z#17 = Z#19)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Optimized Logical Plan ==
+Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion path, [Driver], [1, 0, 0]
+   :- LogicalRDD [X#0, Y#1, D#2]
+   +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+      +- Join Inner, (Z#17 = Z#19)
+         :- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+         +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Physical Plan ==
+*Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion [X#16,Y#20,D1#22] (Driver) [path][1,0,0]
+   :- ExitExchange path, hashpartitioning(X#0, 3)
+   :  +- Scan ExistingRDD[X#0,Y#1,D#2]
+   +- RecExchange path, false, hashpartitioning(X#16, 3)
+      +- *Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- ShuffledHashJoin [Z#17], [Z#19], Inner, BuildRight
+            :- Exchange hashpartitioning(Z#17, 3)
+            :  +- *LinearRecursiveRelation [X#16,Z#17,D1#18](path)
+            +- *NonLinearRecursiveRelation [Z#19,Y#20,D2#21](path)
+
+Compile Datalog: 878 ms
+
+====== 11/27 06:31:08 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4503 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D>) <- path(X,Z,D1), path(Z,Y,D2), D=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:32:29 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3946 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+   dist(X:integer, Y:integer, D:integer)
+== Operator Program ==
+
+0: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias dist
++- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 393 ms
+Execution (Collect): 1768 ms
+Total: 6118 ms
+Result Size: 15
+
+====== 11/27 06:37:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4115 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,D3) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+ Clique 1
+  Parents: 
+   1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   2) PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+  Clique Predicates: 
+  1) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+   Exit Rules:
+    PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+     PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+      dist(X:integer, Y:integer, D:integer)
+   Recursive Rules:
+    PCGAndNode(path_fff_fff(X, Y, D3), rule#: 2, #Children: 3, predicateType: DERIVED)
+     PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(D3 =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+ End Clique 1
+== Operator Program ==
+
+0: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: dist(X, Y, D) <BASE_RELATION>
+Recursive Rules: 
+ 1: (X, Y, D1 + D2 as D3) <PROJECT>
+  2: (0.Z = 1.Z) <JOIN>
+   3: path(X, Z, D1) <RECURSIVE_RELATION>
+   3: path(Z, Y, D2) <RECURSIVE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias path
++- 'Project [unresolvedalias('path1.X AS Var_1#23, None), unresolvedalias('path2.Y AS Var_2#24, None), unresolvedalias('D1 AS Var_3#25, None)]
+   +- 'Recursion path, [Driver], [1, 0, 0]
+      :- 'UnresolvedRelation `dist`
+      +- 'Project ['path1.X, 'path2.Y, unresolvedalias(('path1.D1 + 'path2.D2) AS D1#22, None)]
+         +- 'Join Inner, ('path1.Z = 'path2.Z)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int, Var_3: int
+SubqueryAlias path
++- Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
+   +- Recursion path, [Driver], [1, 0, 0]
+      :- SubqueryAlias dist
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- Join Inner, (Z#17 = Z#19)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Optimized Logical Plan ==
+Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion path, [Driver], [1, 0, 0]
+   :- LogicalRDD [X#0, Y#1, D#2]
+   +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+      +- Join Inner, (Z#17 = Z#19)
+         :- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+         +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Physical Plan ==
+*Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion [X#16,Y#20,D1#22] (Driver) [path][1,0,0]
+   :- ExitExchange path, hashpartitioning(X#0, 3)
+   :  +- Scan ExistingRDD[X#0,Y#1,D#2]
+   +- RecExchange path, false, hashpartitioning(X#16, 3)
+      +- *Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- ShuffledHashJoin [Z#17], [Z#19], Inner, BuildRight
+            :- Exchange hashpartitioning(Z#17, 3)
+            :  +- *LinearRecursiveRelation [X#16,Z#17,D1#18](path)
+            +- *NonLinearRecursiveRelation [Z#19,Y#20,D2#21](path)
+
+Compile Datalog: 757 ms
+
+====== 11/27 06:45:55 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4534 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,D3) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+ Clique 1
+  Parents: 
+   1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   2) PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes, rewritingMethod: Naive)
+  Clique Predicates: 
+  1) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+   Exit Rules:
+    PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+     PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+      dist(X:integer, Y:integer, D:integer)
+   Recursive Rules:
+    PCGAndNode(path_fff_fff(X, Y, D3), rule#: 2, #Children: 3, predicateType: DERIVED)
+     PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(path_fff_bff(Z, Y, D2), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     PCGOrNode(D3 =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+ End Clique 1
+== Operator Program ==
+
+0: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: dist(X, Y, D) <BASE_RELATION>
+Recursive Rules: 
+ 1: (X, Y, D1 + D2 as D3) <PROJECT>
+  2: (0.Z = 1.Z) <JOIN>
+   3: path(X, Z, D1) <RECURSIVE_RELATION>
+   3: path(Z, Y, D2) <RECURSIVE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias path
++- 'Project [unresolvedalias('path1.X AS Var_1#23, None), unresolvedalias('path2.Y AS Var_2#24, None), unresolvedalias('D1 AS Var_3#25, None)]
+   +- 'Recursion path, [Driver], [1, 0, 0]
+      :- 'UnresolvedRelation `dist`
+      +- 'Project ['path1.X, 'path2.Y, unresolvedalias(('path1.D1 + 'path2.D2) AS D1#22, None)]
+         +- 'Join Inner, ('path1.Z = 'path2.Z)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int, Var_3: int
+SubqueryAlias path
++- Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
+   +- Recursion path, [Driver], [1, 0, 0]
+      :- SubqueryAlias dist
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- Join Inner, (Z#17 = Z#19)
+            :- SubqueryAlias path1
+            :  +- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+            +- SubqueryAlias path2
+               +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Optimized Logical Plan ==
+Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion path, [Driver], [1, 0, 0]
+   :- LogicalRDD [X#0, Y#1, D#2]
+   +- Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+      +- Join Inner, (Z#17 = Z#19)
+         :- LinearRecursiveRelation path, [X#16, Z#17, D1#18], [1, 0, 0]
+         +- NonLinearRecursiveRelation path, [Z#19, Y#20, D2#21], [1, 0, 0]
+
+== Physical Plan ==
+*Project [X#16 AS Var_1#23, Y#20 AS Var_2#24, D1#22 AS Var_3#25]
++- Recursion [X#16,Y#20,D1#22] (Driver) [path][1,0,0]
+   :- ExitExchange path, hashpartitioning(X#0, 3)
+   :  +- Scan ExistingRDD[X#0,Y#1,D#2]
+   +- RecExchange path, false, hashpartitioning(X#16, 3)
+      +- *Project [X#16, Y#20, (D1#18 + D2#21) AS D1#22]
+         +- ShuffledHashJoin [Z#17], [Z#19], Inner, BuildRight
+            :- Exchange hashpartitioning(Z#17, 3)
+            :  +- *LinearRecursiveRelation [X#16,Z#17,D1#18](path)
+            +- *NonLinearRecursiveRelation [Z#19,Y#20,D2#21](path)
+
+Compile Datalog: 911 ms
+
+====== 11/27 06:46:38 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4287 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+
+== Datalog Query ==
+path(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(path_fff_fff(X, Y, D), rule#: 1, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+   dist(X:integer, Y:integer, D:integer)
+== Operator Program ==
+
+0: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias dist
++- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 364 ms
+Execution (Collect): 1773 ms
+Total: 6434 ms
+Result Size: 15
+
+====== 11/27 06:47:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4338 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,min<D3>) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:48:23 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3842 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,mmin<D3>) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:53:49 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4259 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,mmin<D3>) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+
+== Datalog Query ==
+path(X,Y,D).
+
+====== 11/27 06:55:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4997 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,mmin<D>) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), 3=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(shortestpaths_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(shortestpaths_fff_fff(X, Y, Aggr_1), rule#: 3.2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(aggregate_shortestpaths_fff_fff(X, Y, min<D>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+   PCGAndNode(aggregate_shortestpaths_fff_fff(X, Y, D), rule#: 3.1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     Clique 1
+      Parents: 
+       1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       2) PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+       3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+      Clique Predicates: 
+      1) CliquePredicate(fs_aggregate_path_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+       Exit Rules: NONE
+       Recursive Rules:
+        PCGAndNode(fs_aggregate_path_2_ffff_ffff(X, Y, D, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+         PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+         PCGOrNode(dist_bff_bff(Z, Y, D2), #Children: 1, predicateType: BASE)
+          dist(X:integer, Y:integer, D:integer)
+         PCGOrNode(3 =_bb_bb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+      2) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+       Exit Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_1_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+          PCGAndNode(fs_aggregate_path_1_ffff_ffff(X, Y, D, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+           PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+            dist(X:integer, Y:integer, D:integer)
+       Recursive Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     End Clique 1
+== Operator Program ==
+
+0: (Var_1 as X, Var_2 as Y, min(Var_3) as D) <AGGREGATE>
+ 1: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+ Exit Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: dist(X, Y, D) <BASE_RELATION>
+ Recursive Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: (X, Y, D) <PROJECT>
+    4: 3 = D1 + D <FILTER>
+     5: (0.Z = 1.X) <JOIN>
+      6: path(X, Z, D1) <RECURSIVE_RELATION>
+      6: dist(X, Y, D) <BASE_RELATION>
+
+====== 11/27 06:56:27 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4624 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,mmin<D>) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(shortestpaths_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(shortestpaths_fff_fff(X, Y, Aggr_1), rule#: 3.2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(aggregate_shortestpaths_fff_fff(X, Y, min<D>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+   PCGAndNode(aggregate_shortestpaths_fff_fff(X, Y, D), rule#: 3.1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     Clique 1
+      Parents: 
+       1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       2) PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+       3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+      Clique Predicates: 
+      1) CliquePredicate(fs_aggregate_path_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+       Exit Rules: NONE
+       Recursive Rules:
+        PCGAndNode(fs_aggregate_path_2_ffff_ffff(X, Y, D, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+         PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+         PCGOrNode(dist_bff_bff(Z, Y, D2), #Children: 1, predicateType: BASE)
+          dist(X:integer, Y:integer, D:integer)
+         PCGOrNode(D =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+      2) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+       Exit Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_1_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+          PCGAndNode(fs_aggregate_path_1_ffff_ffff(X, Y, D, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+           PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+            dist(X:integer, Y:integer, D:integer)
+       Recursive Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     End Clique 1
+== Operator Program ==
+
+0: (Var_1 as X, Var_2 as Y, min(Var_3) as D) <AGGREGATE>
+ 1: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+ Exit Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: dist(X, Y, D) <BASE_RELATION>
+ Recursive Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: (X, Y, D1 + D as D) <PROJECT>
+    4: (0.Z = 1.X) <JOIN>
+     5: path(X, Z, D1) <RECURSIVE_RELATION>
+     5: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias aggregate_shortestpaths
++- 'Aggregate ['path.Var_1, 'path.Var_2], [unresolvedalias('path.Var_1 AS X#29, None), unresolvedalias('path.Var_2 AS Y#30, None), unresolvedalias('min('path.Var_3) AS D#31, None)]
+   +- 'SubqueryAlias path
+      +- 'Project [unresolvedalias('X AS Var_1#26, None), unresolvedalias('Y AS Var_2#27, None), unresolvedalias('FSAggr_1 AS Var_3#28, None)]
+         +- 'AggregateRecursion path, [Driver], [1, 0, 0]
+            :- 'SubqueryAlias fs_aggregate_path_1
+            :  +- 'MonotonicAggregate ['dist.X, 'dist.Y], [unresolvedalias('dist.X AS X#16, None), unresolvedalias('dist.Y AS Y#17, None), unresolvedalias('mmin('dist.D) AS FSAggr_1#18, None)], [1, 0, 0]
+            :     +- 'UnresolvedRelation `dist`
+            +- 'SubqueryAlias fs_aggregate_path_2
+               +- 'MonotonicAggregate ['path1.X, 'dist2.Y], [unresolvedalias('path1.X AS X#23, None), unresolvedalias('dist2.Y AS Y#24, None), unresolvedalias('mmin('D1) AS FSAggr_1#25, None)], [1, 0, 0]
+                  +- 'Project ['path1.X, 'dist2.Y, unresolvedalias(('path1.D1 + 'dist2.D) AS D1#22, None)]
+                     +- 'Join Inner, ('path1.Z = 'dist2.X)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- 'CacheHint
+                           +- 'SubqueryAlias dist2
+                              +- 'Project [*]
+                                 +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias aggregate_shortestpaths
++- Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
+   +- SubqueryAlias path
+      +- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion path, [Driver], [1, 0, 0]
+            :- SubqueryAlias fs_aggregate_path_1
+            :  +- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+            :     +- SubqueryAlias dist
+            :        +- LogicalRDD [X#0, Y#1, D#2]
+            +- SubqueryAlias fs_aggregate_path_2
+               +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+                  +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- Join Inner, (Z#20 = X#0)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- CacheHint
+                           +- SubqueryAlias dist2
+                              +- Project [X#0, Y#1, D#2]
+                                 +- SubqueryAlias dist
+                                    +- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
++- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+   +- AggregateRecursion path, [Driver], [1, 0, 0]
+      :- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+         +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+            +- Join Inner, (Z#20 = X#0)
+               :- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+               +- CacheHint
+                  +- Project [X#0, Y#1, D#2]
+                     +- LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+*HashAggregate(keys=[Var_1#26, Var_2#27], functions=[min(Var_3#28)], output=[X#29, Y#30, D#31])
++- Exchange hashpartitioning(Var_1#26, Var_2#27, 3)
+   +- *HashAggregate(keys=[Var_1#26, Var_2#27], functions=[partial_min(Var_3#28)], output=[Var_1#26, Var_2#27, min#36])
+      +- *Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion [X#23,Y#24,FSAggr_1#25] (Driver) [path][1,0,0]
+            :- ExitAggrExchange(key=[X#0,Y#1], functions=[mmin(D#2)], output=[X#0,Y#1,mmin#39], iterType=Tungsten) hashpartitioning(X#0 AS X#16, 3)
+            :  +- *HashAggregate(keys=[X#0, Y#1], functions=[partial_mmin(D#2)], output=[X#0, Y#1, mmin#39])
+            :     +- Scan ExistingRDD[X#0,Y#1,D#2]
+            +- RecAggrExchange(key=[X#19,Y#1], functions=[mmin(D1#22)], output=[X#23,Y#24,FSAggr_1#25], iterType=Tungsten) hashpartitioning(X#19 AS X#23, 3)
+               +- *HashAggregate(keys=[X#19, Y#1], functions=[partial_mmin(D1#22)], output=[X#19, Y#1, mmin#42])
+                  +- *Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- *CacheBuildSideShuffleHashJoin [Z#20], [X#0], Inner, BuildRight
+                        :- Exchange hashpartitioning(Z#20, 3)
+                        :  +- *AggregateRelation [X#19,Z#20,D1#21](path)
+                        +- Exchange hashpartitioning(X#0, 3)
+                           +- *Project [X#0, Y#1, D#2]
+                              +- Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 1244 ms
+Recursive Iterations: 820 ms
+Execution (Collect): 4715 ms
+Total: 10593 ms
+Result Size: 71
+
+====== 11/27 07:19:04 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error ======
+
+Load: 3815 ms
+
+RamSQL Parse: 109 ms
+WITH recursive reach (Node)
+AS  (SELECT 1)
+UNION
+(SELECT rc.B FROM reach, rc
+WHERE reach.Node = rc.A)
+SELECT Node FROM reach
+
+RamSQL Analyze: 202 ms
+RamSQL Optimize: 62 ms
+RamSQL Generate rules of `reach`: 347 ms
+
+RamSQL Analyze: 7 ms
+RamSQL Optimize: 4 ms
+RamSQL Generate rules of outermost query: 19 ms
+
+== Datalog ObjectText ==
+database({rc(A: integer, B: integer)}).
+reach(C07) <- C07 = 1.
+reach(B1) <- reach(G9), rc(G9, B1).
+result(Node6) <- reach(Node6).
+
+== Datalog Query ==
+result(Node6).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_f_f(Node6), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(reach_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(reach_f_f(G9), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(reach_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(reach_f, binding: f, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(reach_f_f(C07), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(C07 =_fb_fb 1, #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+     Recursive Rules:
+      PCGAndNode(reach_f_f(B1), rule#: 2, #Children: 2, predicateType: DERIVED)
+       PCGOrNode(reach_f_f(G9), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(rc_bf_bf(G9, B1), #Children: 1, predicateType: BASE)
+        rc(A:integer, B:integer)
+   End Clique 1
+== Operator Program ==
+
+0: reach(Var_1) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: C07 = 1 <ASSIGNMENT>
+Recursive Rules: 
+ 1: (B) <PROJECT>
+  2: (0.G9 = 1.A) <JOIN>
+   3: reach(G9) <RECURSIVE_RELATION>
+   3: rc(A, B) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias reach
++- 'Project [unresolvedalias('rc.B AS Var_1#18, None)]
+   +- 'Recursion reach, [Driver], [1]
+      :- LocalRelation [C07#16]
+      +- 'Project ['rc.B]
+         +- 'Join Inner, ('reach1.G9 = 'rc.A)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G9#17], [1]
+            +- 'CacheHint
+               +- 'UnresolvedRelation `rc`
+
+== Analyzed Logical Plan ==
+Var_1: int
+SubqueryAlias reach
++- Project [B#1 AS Var_1#18]
+   +- Recursion reach, [Driver], [1]
+      :- LocalRelation [C07#16]
+      +- Project [B#1]
+         +- Join Inner, (G9#17 = A#0)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G9#17], [1]
+            +- CacheHint
+               +- SubqueryAlias rc
+                  +- LogicalRDD [A#0, B#1]
+
+== Optimized Logical Plan ==
+Project [B#1 AS Var_1#18]
++- Recursion reach, [Driver], [1]
+   :- LocalRelation [C07#16]
+   +- Project [B#1]
+      +- Join Inner, (G9#17 = A#0)
+         :- LinearRecursiveRelation reach, [G9#17], [1]
+         +- CacheHint
+            +- LogicalRDD [A#0, B#1]
+
+== Physical Plan ==
+*Project [B#1 AS Var_1#18]
++- Recursion [B#1] (Driver) [reach][1]
+   :- ExitExchange reach, hashpartitioning(C07#16, 3)
+   :  +- LocalTableScan [C07#16]
+   +- RecExchange reach, false, hashpartitioning(B#1, 3)
+      +- *Project [B#1]
+         +- *CacheBuildSideShuffleHashJoin [G9#17], [A#0], Inner, BuildRight
+            :- *LinearRecursiveRelation [G9#17](reach)
+            +- Exchange hashpartitioning(A#0, 3)
+               +- Scan ExistingRDD[A#0,B#1]
+
+Recursive Iterations: 157 ms
+[Success - Execution Finished]
+Compile RamSQL: 1700 ms
+Execution (Collect): 1861 ms
+Total: 7420 ms
+Result Size: 5
+
+====== 11/27 07:20:35 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error ======
+
+Load: 3793 ms
+
+RamSQL Parse: 114 ms
+WITH recursive reach (Node)
+AS  (SELECT 1)
+UNION
+(SELECT rc.B FROM reach, rc
+WHERE reach.Node = rc.A)
+SELECT Node FROM reach
+
+RamSQL Analyze: 199 ms
+RamSQL Optimize: 59 ms
+RamSQL Generate rules of `reach`: 332 ms
+
+RamSQL Analyze: 5 ms
+RamSQL Optimize: 1 ms
+RamSQL Generate rules of outermost query: 12 ms
+
+== Datalog ObjectText ==
+database({rc(A: integer, B: integer)}).
+reach(C07) <- C07 = 1.
+reach(B1) <- reach(G9), rc(G9, B1).
+result(Node6) <- reach(Node6).
+
+== Datalog Query ==
+result(Node6).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_f_f(Node6), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(reach_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(reach_f_f(G9), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(reach_f_f(Node6), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(reach_f, binding: f, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(reach_f_f(C07), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(C07 =_fb_fb 1, #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+     Recursive Rules:
+      PCGAndNode(reach_f_f(B1), rule#: 2, #Children: 2, predicateType: DERIVED)
+       PCGOrNode(reach_f_f(G9), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(rc_bf_bf(G9, B1), #Children: 1, predicateType: BASE)
+        rc(A:integer, B:integer)
+   End Clique 1
+== Operator Program ==
+
+0: reach(Var_1) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: C07 = 1 <ASSIGNMENT>
+Recursive Rules: 
+ 1: (B) <PROJECT>
+  2: (0.G9 = 1.A) <JOIN>
+   3: reach(G9) <RECURSIVE_RELATION>
+   3: rc(A, B) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias reach
++- 'Project [unresolvedalias('rc.B AS Var_1#18, None)]
+   +- 'Recursion reach, [Driver], [1]
+      :- LocalRelation [C07#16]
+      +- 'Project ['rc.B]
+         +- 'Join Inner, ('reach1.G9 = 'rc.A)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G9#17], [1]
+            +- 'CacheHint
+               +- 'UnresolvedRelation `rc`
+
+== Analyzed Logical Plan ==
+Var_1: int
+SubqueryAlias reach
++- Project [B#1 AS Var_1#18]
+   +- Recursion reach, [Driver], [1]
+      :- LocalRelation [C07#16]
+      +- Project [B#1]
+         +- Join Inner, (G9#17 = A#0)
+            :- SubqueryAlias reach1
+            :  +- LinearRecursiveRelation reach, [G9#17], [1]
+            +- CacheHint
+               +- SubqueryAlias rc
+                  +- LogicalRDD [A#0, B#1]
+
+== Optimized Logical Plan ==
+Project [B#1 AS Var_1#18]
++- Recursion reach, [Driver], [1]
+   :- LocalRelation [C07#16]
+   +- Project [B#1]
+      +- Join Inner, (G9#17 = A#0)
+         :- LinearRecursiveRelation reach, [G9#17], [1]
+         +- CacheHint
+            +- LogicalRDD [A#0, B#1]
+
+== Physical Plan ==
+*Project [B#1 AS Var_1#18]
++- Recursion [B#1] (Driver) [reach][1]
+   :- ExitExchange reach, hashpartitioning(C07#16, 3)
+   :  +- LocalTableScan [C07#16]
+   +- RecExchange reach, false, hashpartitioning(B#1, 3)
+      +- *Project [B#1]
+         +- *CacheBuildSideShuffleHashJoin [G9#17], [A#0], Inner, BuildRight
+            :- *LinearRecursiveRelation [G9#17](reach)
+            +- Exchange hashpartitioning(A#0, 3)
+               +- Scan ExistingRDD[A#0,B#1]
+
+Recursive Iterations: 182 ms
+[Success - Execution Finished]
+Compile RamSQL: 1710 ms
+Execution (Collect): 2013 ms
+Total: 7561 ms
+Result Size: 5
+
+====== 11/27 07:21:24 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3529 ms
+
+RamSQL Parse: 79 ms
+WITH recursive all_paths(Sp,Ep,Dist) as(
+SELECT NodeA , NodeB , Dist FROM dist
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 62 ms
+RamSQL Optimize: 26 ms
+RamSQL Generate rules of `all_paths`: 159 ms
+
+RamSQL Analyze: 10 ms
+RamSQL Optimize: 2 ms
+RamSQL Generate rules of outermost query: 20 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp8, Ep9, Dist10) <- all_paths(Sp8, Ep9, Dist10).
+
+== Datalog Query ==
+result(Sp8, Ep9, Dist10).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp8, Ep9, Dist10), rule#: 2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+     dist(NodeA:integer, NodeB:integer, Dist:integer)
+== Operator Program ==
+
+0: (NodeA as Sp8, NodeB as Ep9, Dist as Dist10) <PROJECT>
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'Project [unresolvedalias('dist.NodeA AS Sp1#13, None), unresolvedalias('dist.NodeB AS Ep2#14, None), unresolvedalias('dist.Dist AS Dist3#15, None)]
++- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+Sp1: int, Ep2: int, Dist3: int
+Project [NodeA#0 AS Sp1#13, NodeB#1 AS Ep2#14, Dist#2 AS Dist3#15]
++- SubqueryAlias dist
+   +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Optimized Logical Plan ==
+Project [NodeA#0 AS Sp1#13, NodeB#1 AS Ep2#14, Dist#2 AS Dist3#15]
++- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Physical Plan ==
+*Project [NodeA#0 AS Sp1#13, NodeB#1 AS Ep2#14, Dist#2 AS Dist3#15]
++- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+
+[Success - Execution Finished]
+Compile RamSQL: 679 ms
+Execution (Collect): 1619 ms
+Total: 5861 ms
+Result Size: 15
+
+====== 11/27 07:22:00 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3803 ms
+
+RamSQL Parse: 89 ms
+WITH recursive all_paths(Sp,Ep,Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 84 ms
+RamSQL Optimize: 43 ms
+RamSQL Generate rules of `all_paths`: 213 ms
+
+RamSQL Analyze: 12 ms
+RamSQL Optimize: 2 ms
+RamSQL Generate rules of outermost query: 21 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp8, Ep9, Dist10) <- all_paths(Sp8, Ep9, Dist10).
+
+== Datalog Query ==
+result(Sp8, Ep9, Dist10).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp8, Ep9, Dist10), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 2, predicateType: DERIVED, isRecursive: No)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+     dist(NodeA:integer, NodeB:integer, Dist:integer)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+     dist(NodeA:integer, NodeB:integer, Dist:integer)
+== Operator Program ==
+
+0: all_paths(NodeA, NodeB, Dist) <UNION>
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'Distinct
++- 'SubqueryAlias all_paths
+   +- 'Union
+      :- 'UnresolvedRelation `dist`
+      +- 'SubqueryAlias dist1
+         +- 'Project [*]
+            +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+NodeA: int, NodeB: int, Dist: int
+Distinct
++- SubqueryAlias all_paths
+   +- Union
+      :- SubqueryAlias dist
+      :  +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+      +- SubqueryAlias dist1
+         +- Project [NodeA#0, NodeB#1, Dist#2]
+            +- SubqueryAlias dist
+               +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Optimized Logical Plan ==
+Aggregate [NodeA#0, NodeB#1, Dist#2], [NodeA#0, NodeB#1, Dist#2]
++- Union
+   :- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+   +- Project [NodeA#0, NodeB#1, Dist#2]
+      +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Physical Plan ==
+*HashAggregate(keys=[NodeA#0, NodeB#1, Dist#2], functions=[], output=[NodeA#0, NodeB#1, Dist#2])
++- Exchange hashpartitioning(NodeA#0, NodeB#1, Dist#2, 3)
+   +- *HashAggregate(keys=[NodeA#0, NodeB#1, Dist#2], functions=[], output=[NodeA#0, NodeB#1, Dist#2])
+      +- Union
+         :- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+         +- *Project [NodeA#0, NodeB#1, Dist#2]
+            +- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+
+[Success - Execution Finished]
+Compile RamSQL: 795 ms
+Execution (Collect): 2119 ms
+Total: 6759 ms
+Result Size: 15
+
+====== 11/27 07:23:43 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4197 ms
+
+RamSQL Parse: 130 ms
+WITH recursive all_paths(Sp,Ep,Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Dist+dist.Dist
+
+FROM all_paths,dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 287 ms
+RamSQL Optimize: 78 ms
+RamSQL Generate rules of `all_paths`: 485 ms
+
+RamSQL Analyze: 6 ms
+RamSQL Optimize: 3 ms
+RamSQL Generate rules of outermost query: 16 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(G15, NodeB1, C211) <- all_paths(G15, G14, Dist10), dist(G14, NodeB1, Dist2), C211 = (Dist10 + Dist2).
+result(Sp8, Ep9, Dist10) <- all_paths(Sp8, Ep9, Dist10).
+
+== Datalog Query ==
+result(Sp8, Ep9, Dist10).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp8, Ep9, Dist10), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(all_paths_fff_fff(G15, G14, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(all_paths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(all_paths_fff_fff(G15, NodeB1, C211), rule#: 2, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(all_paths_fff_fff(G15, G14, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G14, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C211 =_fb_fb +(Dist10, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+   End Clique 1
+== Operator Program ==
+
+0: all_paths_fff(Var_1, Var_2, Var_3) <MUTUAL_RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G15, NodeB, Dist10 + Dist as C211) <PROJECT>
+  2: (0.G14 = 1.NodeA) <JOIN>
+   3: all_paths(G15, G14, Dist10) <RECURSIVE_RELATION>
+   3: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+====== 11/27 07:24:35 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4377 ms
+
+RamSQL Parse: 135 ms
+WITH recursive all_paths(Sp,Ep,Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Dist+dist.Dist
+
+FROM all_paths,dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 313 ms
+RamSQL Optimize: 110 ms
+RamSQL Generate rules of `all_paths`: 522 ms
+
+RamSQL Analyze: 7 ms
+RamSQL Optimize: 2 ms
+RamSQL Generate rules of outermost query: 15 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(G15, NodeB1, C211) <- all_paths(G15, G14, Dist10), dist(G14, NodeB1, Dist2), C211 = (Dist10 + Dist2).
+result(Sp8, Ep9, Dist10) <- all_paths(Sp8, Ep9, Dist10).
+
+== Datalog Query ==
+result(Sp8, Ep9, Dist10).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp8, Ep9, Dist10), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(all_paths_fff_fff(G15, G14, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(all_paths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 1, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(all_paths_fff_fff(G15, NodeB1, C211), rule#: 2, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(all_paths_fff_fff(G15, G14, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G14, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C211 =_fb_fb +(Dist10, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+   End Clique 1
+== Operator Program ==
+
+0: all_paths_fff(Var_1, Var_2, Var_3) <MUTUAL_RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: SemiNaive)
+Exit Rules: 
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G15, NodeB, Dist10 + Dist as C211) <PROJECT>
+  2: (0.G14 = 1.NodeA) <JOIN>
+   3: all_paths(G15, G14, Dist10) <RECURSIVE_RELATION>
+   3: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+====== 11/27 07:24:56 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4335 ms
+
+RamSQL Parse: 112 ms
+WITH recursive all_paths(Sp,Ep,Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 97 ms
+RamSQL Optimize: 51 ms
+RamSQL Generate rules of `all_paths`: 224 ms
+
+RamSQL Analyze: 10 ms
+RamSQL Optimize: 2 ms
+RamSQL Generate rules of outermost query: 19 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(NodeA0, NodeB1, Dist2) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp8, Ep9, Dist10) <- all_paths(Sp8, Ep9, Dist10).
+
+== Datalog Query ==
+result(Sp8, Ep9, Dist10).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp8, Ep9, Dist10), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp8, Ep9, Dist10), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp8, Ep9, Dist10), #Children: 2, predicateType: DERIVED, isRecursive: No)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+     dist(NodeA:integer, NodeB:integer, Dist:integer)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, Dist2), rule#: 2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+     dist(NodeA:integer, NodeB:integer, Dist:integer)
+== Operator Program ==
+
+0: all_paths(NodeA, NodeB, Dist) <UNION>
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+ 1: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'Distinct
++- 'SubqueryAlias all_paths
+   +- 'Union
+      :- 'UnresolvedRelation `dist`
+      +- 'SubqueryAlias dist1
+         +- 'Project [*]
+            +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+NodeA: int, NodeB: int, Dist: int
+Distinct
++- SubqueryAlias all_paths
+   +- Union
+      :- SubqueryAlias dist
+      :  +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+      +- SubqueryAlias dist1
+         +- Project [NodeA#0, NodeB#1, Dist#2]
+            +- SubqueryAlias dist
+               +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Optimized Logical Plan ==
+Aggregate [NodeA#0, NodeB#1, Dist#2], [NodeA#0, NodeB#1, Dist#2]
++- Union
+   :- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+   +- Project [NodeA#0, NodeB#1, Dist#2]
+      +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Physical Plan ==
+*HashAggregate(keys=[NodeA#0, NodeB#1, Dist#2], functions=[], output=[NodeA#0, NodeB#1, Dist#2])
++- Exchange hashpartitioning(NodeA#0, NodeB#1, Dist#2, 3)
+   +- *HashAggregate(keys=[NodeA#0, NodeB#1, Dist#2], functions=[], output=[NodeA#0, NodeB#1, Dist#2])
+      +- Union
+         :- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+         +- *Project [NodeA#0, NodeB#1, Dist#2]
+            +- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+
+[Success - Execution Finished]
+Compile RamSQL: 927 ms
+Execution (Collect): 2426 ms
+Total: 7756 ms
+Result Size: 15
+
+====== 11/27 07:25:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3963 ms
+
+RamSQL Parse: 94 ms
+WITH recursive all_paths(Sp,Ep,min() as shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 88 ms
+RamSQL Optimize: 42 ms
+RamSQL Generate rules of `all_paths`: 201 ms
+
+RamSQL Analyze: 9 ms
+RamSQL Optimize: 2 ms
+
+====== 11/27 07:25:38 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4110 ms
+
+RamSQL Parse: 117 ms
+WITH recursive all_paths(Sp,Ep,min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 105 ms
+RamSQL Optimize: 41 ms
+RamSQL Generate rules of `all_paths`: 219 ms
+
+RamSQL Analyze: 13 ms
+RamSQL Optimize: 4 ms
+RamSQL Generate rules of outermost query: 23 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- all_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 2, predicateType: DERIVED, isRecursive: No)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+     PCGAndNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+      PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+       dist(NodeA:integer, NodeB:integer, Dist:integer)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+     PCGAndNode(fs_aggregate_all_paths_2_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 2.1, #Children: 1, predicateType: DERIVED)
+      PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+       dist(NodeA:integer, NodeB:integer, Dist:integer)
+
+====== 11/27 07:26:39 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4250 ms
+
+RamSQL Parse: 91 ms
+WITH recursive all_paths(Sp,Ep, mmin() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 92 ms
+RamSQL Optimize: 43 ms
+
+====== 11/27 07:27:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4454 ms
+
+RamSQL Parse: 112 ms
+WITH recursive all_paths(Sp,Ep, min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT NodeA , NodeB , Dist FROM dist)
+
+)
+SELECT Sp,Ep,Shortest_Dist FROM all_paths
+
+RamSQL Analyze: 86 ms
+RamSQL Optimize: 40 ms
+RamSQL Generate rules of `all_paths`: 191 ms
+
+RamSQL Analyze: 6 ms
+RamSQL Optimize: 2 ms
+RamSQL Generate rules of outermost query: 13 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- all_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 2, predicateType: DERIVED, isRecursive: No)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+     PCGAndNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+      PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+       dist(NodeA:integer, NodeB:integer, Dist:integer)
+   PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+     PCGAndNode(fs_aggregate_all_paths_2_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 2.1, #Children: 1, predicateType: DERIVED)
+      PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+       dist(NodeA:integer, NodeB:integer, Dist:integer)
+
+====== 11/27 07:28:57 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3900 ms
+
+RamSQL Parse: 141 ms
+WITH recursive all_paths(Sp,Ep, min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Dist+dist.Dist
+FROM all_paths,dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT Sp,Ep,Shortest_Dist FROM all_paths
+
+====== 11/27 07:29:48 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4615 ms
+
+RamSQL Parse: 186 ms
+WITH recursive all_paths(Sp,Ep, min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT Sp,Ep,Shortest_Dist FROM all_paths
+
+RamSQL Analyze: 293 ms
+RamSQL Optimize: 87 ms
+RamSQL Generate rules of `all_paths`: 460 ms
+
+RamSQL Analyze: 5 ms
+RamSQL Optimize: 1 ms
+RamSQL Generate rules of outermost query: 12 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(G16, NodeB1, mmin<C212>) <- all_paths(G16, G15, Shortest_Dist11), dist(G15, NodeB1, Dist2), C212 = (Shortest_Dist11 + Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- all_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_all_paths_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, C212, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G15, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C212 =_fb_fb +(Shortest_Dist11, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(all_paths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(all_paths_fff_fff(G16, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: all_paths_fff(Var_1, Var_2, Var_3) <MUTUAL_RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, NodeB, mmin(Dist) as FSAggr_1) <AGGREGATE_FS>
+  2: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G16, NodeB, mmin(C212) as FSAggr_1) <AGGREGATE_FS>
+  2: (G16, NodeB, Shortest_Dist11 + Dist as C212) <PROJECT>
+   3: (0.G15 = 1.NodeA) <JOIN>
+    4: all_paths(G16, G15, Shortest_Dist11) <RECURSIVE_RELATION>
+    4: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+====== 11/27 07:31:40 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3984 ms
+
+====== 11/27 07:32:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3812 ms
+
+RamSQL Parse: 129 ms
+WITH recursive all_paths(Sp,Ep, min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 257 ms
+RamSQL Optimize: 62 ms
+RamSQL Generate rules of `all_paths`: 391 ms
+
+RamSQL Analyze: 6 ms
+RamSQL Optimize: 1 ms
+RamSQL Generate rules of outermost query: 14 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(G16, NodeB1, mmin<C212>) <- all_paths(G16, G15, Shortest_Dist11), dist(G15, NodeB1, Dist2), C212 = (Shortest_Dist11 + Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- all_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_all_paths_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, C212, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G15, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C212 =_fb_fb +(Shortest_Dist11, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(all_paths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(all_paths_fff_fff(G16, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: all_paths_fff(Var_1, Var_2, Var_3) <MUTUAL_RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, NodeB, mmin(Dist) as FSAggr_1) <AGGREGATE_FS>
+  2: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G16, NodeB, mmin(C212) as FSAggr_1) <AGGREGATE_FS>
+  2: (G16, NodeB, Shortest_Dist11 + Dist as C212) <PROJECT>
+   3: (0.G15 = 1.NodeA) <JOIN>
+    4: all_paths(G16, G15, Shortest_Dist11) <RECURSIVE_RELATION>
+    4: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+====== 11/27 07:33:52 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3813 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,mmin<D>) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(shortestpaths_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(shortestpaths_fff_fff(X, Y, Aggr_1), rule#: 3.2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(aggregate_shortestpaths_fff_fff(X, Y, min<D>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+   PCGAndNode(aggregate_shortestpaths_fff_fff(X, Y, D), rule#: 3.1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     Clique 1
+      Parents: 
+       1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       2) PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+       3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+      Clique Predicates: 
+      1) CliquePredicate(fs_aggregate_path_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+       Exit Rules: NONE
+       Recursive Rules:
+        PCGAndNode(fs_aggregate_path_2_ffff_ffff(X, Y, D, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+         PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+         PCGOrNode(dist_bff_bff(Z, Y, D2), #Children: 1, predicateType: BASE)
+          dist(X:integer, Y:integer, D:integer)
+         PCGOrNode(D =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+      2) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+       Exit Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_1_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+          PCGAndNode(fs_aggregate_path_1_ffff_ffff(X, Y, D, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+           PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+            dist(X:integer, Y:integer, D:integer)
+       Recursive Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     End Clique 1
+== Operator Program ==
+
+0: (Var_1 as X, Var_2 as Y, min(Var_3) as D) <AGGREGATE>
+ 1: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+ Exit Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: dist(X, Y, D) <BASE_RELATION>
+ Recursive Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: (X, Y, D1 + D as D) <PROJECT>
+    4: (0.Z = 1.X) <JOIN>
+     5: path(X, Z, D1) <RECURSIVE_RELATION>
+     5: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias aggregate_shortestpaths
++- 'Aggregate ['path.Var_1, 'path.Var_2], [unresolvedalias('path.Var_1 AS X#29, None), unresolvedalias('path.Var_2 AS Y#30, None), unresolvedalias('min('path.Var_3) AS D#31, None)]
+   +- 'SubqueryAlias path
+      +- 'Project [unresolvedalias('X AS Var_1#26, None), unresolvedalias('Y AS Var_2#27, None), unresolvedalias('FSAggr_1 AS Var_3#28, None)]
+         +- 'AggregateRecursion path, [Driver], [1, 0, 0]
+            :- 'SubqueryAlias fs_aggregate_path_1
+            :  +- 'MonotonicAggregate ['dist.X, 'dist.Y], [unresolvedalias('dist.X AS X#16, None), unresolvedalias('dist.Y AS Y#17, None), unresolvedalias('mmin('dist.D) AS FSAggr_1#18, None)], [1, 0, 0]
+            :     +- 'UnresolvedRelation `dist`
+            +- 'SubqueryAlias fs_aggregate_path_2
+               +- 'MonotonicAggregate ['path1.X, 'dist2.Y], [unresolvedalias('path1.X AS X#23, None), unresolvedalias('dist2.Y AS Y#24, None), unresolvedalias('mmin('D1) AS FSAggr_1#25, None)], [1, 0, 0]
+                  +- 'Project ['path1.X, 'dist2.Y, unresolvedalias(('path1.D1 + 'dist2.D) AS D1#22, None)]
+                     +- 'Join Inner, ('path1.Z = 'dist2.X)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- 'CacheHint
+                           +- 'SubqueryAlias dist2
+                              +- 'Project [*]
+                                 +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias aggregate_shortestpaths
++- Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
+   +- SubqueryAlias path
+      +- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion path, [Driver], [1, 0, 0]
+            :- SubqueryAlias fs_aggregate_path_1
+            :  +- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+            :     +- SubqueryAlias dist
+            :        +- LogicalRDD [X#0, Y#1, D#2]
+            +- SubqueryAlias fs_aggregate_path_2
+               +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+                  +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- Join Inner, (Z#20 = X#0)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- CacheHint
+                           +- SubqueryAlias dist2
+                              +- Project [X#0, Y#1, D#2]
+                                 +- SubqueryAlias dist
+                                    +- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
++- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+   +- AggregateRecursion path, [Driver], [1, 0, 0]
+      :- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+         +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+            +- Join Inner, (Z#20 = X#0)
+               :- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+               +- CacheHint
+                  +- Project [X#0, Y#1, D#2]
+                     +- LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+*HashAggregate(keys=[Var_1#26, Var_2#27], functions=[min(Var_3#28)], output=[X#29, Y#30, D#31])
++- Exchange hashpartitioning(Var_1#26, Var_2#27, 3)
+   +- *HashAggregate(keys=[Var_1#26, Var_2#27], functions=[partial_min(Var_3#28)], output=[Var_1#26, Var_2#27, min#36])
+      +- *Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion [X#23,Y#24,FSAggr_1#25] (Driver) [path][1,0,0]
+            :- ExitAggrExchange(key=[X#0,Y#1], functions=[mmin(D#2)], output=[X#0,Y#1,mmin#39], iterType=Tungsten) hashpartitioning(X#0 AS X#16, 3)
+            :  +- *HashAggregate(keys=[X#0, Y#1], functions=[partial_mmin(D#2)], output=[X#0, Y#1, mmin#39])
+            :     +- Scan ExistingRDD[X#0,Y#1,D#2]
+            +- RecAggrExchange(key=[X#19,Y#1], functions=[mmin(D1#22)], output=[X#23,Y#24,FSAggr_1#25], iterType=Tungsten) hashpartitioning(X#19 AS X#23, 3)
+               +- *HashAggregate(keys=[X#19, Y#1], functions=[partial_mmin(D1#22)], output=[X#19, Y#1, mmin#42])
+                  +- *Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- *CacheBuildSideShuffleHashJoin [Z#20], [X#0], Inner, BuildRight
+                        :- Exchange hashpartitioning(Z#20, 3)
+                        :  +- *AggregateRelation [X#19,Z#20,D1#21](path)
+                        +- Exchange hashpartitioning(X#0, 3)
+                           +- *Project [X#0, Y#1, D#2]
+                              +- Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 1062 ms
+Recursive Iterations: 704 ms
+Execution (Collect): 4468 ms
+Total: 9355 ms
+Result Size: 71
+
+====== 11/27 07:34:13 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3845 ms
+
+RamSQL Parse: 129 ms
+WITH recursive all_paths(Sp,Ep, min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+all_paths.Sp , dist.NodeB ,  all_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM all_paths
+
+RamSQL Analyze: 251 ms
+RamSQL Optimize: 73 ms
+RamSQL Generate rules of `all_paths`: 412 ms
+
+RamSQL Analyze: 7 ms
+RamSQL Optimize: 3 ms
+RamSQL Generate rules of outermost query: 18 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+all_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+all_paths(G16, NodeB1, mmin<C212>) <- all_paths(G16, G15, Shortest_Dist11), dist(G15, NodeB1, Dist2), C212 = (Shortest_Dist11 + Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- all_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, Shortest_Dist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(all_paths_fff_fff(Sp9, Ep10, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_all_paths_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, C212, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(all_paths_fff_fff(G16, G15, Shortest_Dist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G15, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C212 =_fb_fb +(Shortest_Dist11, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(all_paths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(all_paths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_all_paths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(all_paths_fff_fff(G16, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_all_paths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: all_paths_fff(Var_1, Var_2, Var_3) <MUTUAL_RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, NodeB, mmin(Dist) as FSAggr_1) <AGGREGATE_FS>
+  2: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G16, NodeB, mmin(C212) as FSAggr_1) <AGGREGATE_FS>
+  2: (G16, NodeB, Shortest_Dist11 + Dist as C212) <PROJECT>
+   3: (0.G15 = 1.NodeA) <JOIN>
+    4: all_paths(G16, G15, Shortest_Dist11) <RECURSIVE_RELATION>
+    4: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+====== 11/27 07:34:58 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4186 ms
+
+RamSQL Parse: 129 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+All_paths.Sp , dist.NodeB ,  All_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM All_paths
+
+====== 11/27 07:36:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4272 ms
+
+RamSQL Parse: 136 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+All_paths.Sp , dist.NodeB ,  All_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM All_paths
+
+====== 11/27 07:39:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 3808 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+
+====== 11/27 07:39:50 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4329 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,D) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+
+====== 11/27 07:40:22 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 4082 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer, D: integer)}).
+path(X,Y,mmin<D>) <- dist(X,Y,D).
+path(X,Y,mmin<D>) <- path(X,Z,D1), dist(Z,Y,D2), D=D1+D2.
+shortestpaths(X,Y,min<D>) <- path(X,Y,D).
+
+== Datalog Query ==
+shortestpaths(X,Y,D).
+== Compiled PCG Tree ==
+
+PCGOrNode(shortestpaths_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(shortestpaths_fff_fff(X, Y, Aggr_1), rule#: 3.2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(aggregate_shortestpaths_fff_fff(X, Y, min<D>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+   PCGAndNode(aggregate_shortestpaths_fff_fff(X, Y, D), rule#: 3.1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     Clique 1
+      Parents: 
+       1) PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       2) PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+       3) PCGOrNode(path_fff_fff(X, Y, D), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+      Clique Predicates: 
+      1) CliquePredicate(fs_aggregate_path_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+       Exit Rules: NONE
+       Recursive Rules:
+        PCGAndNode(fs_aggregate_path_2_ffff_ffff(X, Y, D, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+         PCGOrNode(path_fff_fff(X, Z, D1), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+         PCGOrNode(dist_bff_bff(Z, Y, D2), #Children: 1, predicateType: BASE)
+          dist(X:integer, Y:integer, D:integer)
+         PCGOrNode(D =_fb_fb +(D1, D2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+      2) CliquePredicate(path_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+       Exit Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_1_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+          PCGAndNode(fs_aggregate_path_1_ffff_ffff(X, Y, D, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+           PCGOrNode(dist_fff_fff(X, Y, D), #Children: 1, predicateType: BASE)
+            dist(X:integer, Y:integer, D:integer)
+       Recursive Rules:
+        PCGAndNode(path_fff_fff(X, Y, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(fs_aggregate_path_2_ffff_ffff(X, Y, mmin<D>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     End Clique 1
+== Operator Program ==
+
+0: (Var_1 as X, Var_2 as Y, min(Var_3) as D) <AGGREGATE>
+ 1: path(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+ Exit Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: dist(X, Y, D) <BASE_RELATION>
+ Recursive Rules: 
+  2: (X, Y, mmin(D) as FSAggr_1) <AGGREGATE_FS>
+   3: (X, Y, D1 + D as D) <PROJECT>
+    4: (0.Z = 1.X) <JOIN>
+     5: path(X, Z, D1) <RECURSIVE_RELATION>
+     5: dist(X, Y, D) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias aggregate_shortestpaths
++- 'Aggregate ['path.Var_1, 'path.Var_2], [unresolvedalias('path.Var_1 AS X#29, None), unresolvedalias('path.Var_2 AS Y#30, None), unresolvedalias('min('path.Var_3) AS D#31, None)]
+   +- 'SubqueryAlias path
+      +- 'Project [unresolvedalias('X AS Var_1#26, None), unresolvedalias('Y AS Var_2#27, None), unresolvedalias('FSAggr_1 AS Var_3#28, None)]
+         +- 'AggregateRecursion path, [Driver], [1, 0, 0]
+            :- 'SubqueryAlias fs_aggregate_path_1
+            :  +- 'MonotonicAggregate ['dist.X, 'dist.Y], [unresolvedalias('dist.X AS X#16, None), unresolvedalias('dist.Y AS Y#17, None), unresolvedalias('mmin('dist.D) AS FSAggr_1#18, None)], [1, 0, 0]
+            :     +- 'UnresolvedRelation `dist`
+            +- 'SubqueryAlias fs_aggregate_path_2
+               +- 'MonotonicAggregate ['path1.X, 'dist2.Y], [unresolvedalias('path1.X AS X#23, None), unresolvedalias('dist2.Y AS Y#24, None), unresolvedalias('mmin('D1) AS FSAggr_1#25, None)], [1, 0, 0]
+                  +- 'Project ['path1.X, 'dist2.Y, unresolvedalias(('path1.D1 + 'dist2.D) AS D1#22, None)]
+                     +- 'Join Inner, ('path1.Z = 'dist2.X)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- 'CacheHint
+                           +- 'SubqueryAlias dist2
+                              +- 'Project [*]
+                                 +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+X: int, Y: int, D: int
+SubqueryAlias aggregate_shortestpaths
++- Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
+   +- SubqueryAlias path
+      +- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion path, [Driver], [1, 0, 0]
+            :- SubqueryAlias fs_aggregate_path_1
+            :  +- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+            :     +- SubqueryAlias dist
+            :        +- LogicalRDD [X#0, Y#1, D#2]
+            +- SubqueryAlias fs_aggregate_path_2
+               +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+                  +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- Join Inner, (Z#20 = X#0)
+                        :- SubqueryAlias path1
+                        :  +- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+                        +- CacheHint
+                           +- SubqueryAlias dist2
+                              +- Project [X#0, Y#1, D#2]
+                                 +- SubqueryAlias dist
+                                    +- LogicalRDD [X#0, Y#1, D#2]
+
+== Optimized Logical Plan ==
+Aggregate [Var_1#26, Var_2#27], [Var_1#26 AS X#29, Var_2#27 AS Y#30, min(Var_3#28) AS D#31]
++- Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+   +- AggregateRecursion path, [Driver], [1, 0, 0]
+      :- MonotonicAggregate [X#0, Y#1], [X#0 AS X#16, Y#1 AS Y#17, mmin(D#2) AS FSAggr_1#18], [1, 0, 0]
+      :  +- LogicalRDD [X#0, Y#1, D#2]
+      +- MonotonicAggregate [X#19, Y#1], [X#19 AS X#23, Y#1 AS Y#24, mmin(D1#22) AS FSAggr_1#25], [1, 0, 0]
+         +- Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+            +- Join Inner, (Z#20 = X#0)
+               :- AggregateRelation path, [X#19, Z#20, D1#21], [1, 0, 0]
+               +- CacheHint
+                  +- Project [X#0, Y#1, D#2]
+                     +- LogicalRDD [X#0, Y#1, D#2]
+
+== Physical Plan ==
+*HashAggregate(keys=[Var_1#26, Var_2#27], functions=[min(Var_3#28)], output=[X#29, Y#30, D#31])
++- Exchange hashpartitioning(Var_1#26, Var_2#27, 3)
+   +- *HashAggregate(keys=[Var_1#26, Var_2#27], functions=[partial_min(Var_3#28)], output=[Var_1#26, Var_2#27, min#36])
+      +- *Project [X#23 AS Var_1#26, Y#24 AS Var_2#27, FSAggr_1#25 AS Var_3#28]
+         +- AggregateRecursion [X#23,Y#24,FSAggr_1#25] (Driver) [path][1,0,0]
+            :- ExitAggrExchange(key=[X#0,Y#1], functions=[mmin(D#2)], output=[X#0,Y#1,mmin#39], iterType=Tungsten) hashpartitioning(X#0 AS X#16, 3)
+            :  +- *HashAggregate(keys=[X#0, Y#1], functions=[partial_mmin(D#2)], output=[X#0, Y#1, mmin#39])
+            :     +- Scan ExistingRDD[X#0,Y#1,D#2]
+            +- RecAggrExchange(key=[X#19,Y#1], functions=[mmin(D1#22)], output=[X#23,Y#24,FSAggr_1#25], iterType=Tungsten) hashpartitioning(X#19 AS X#23, 3)
+               +- *HashAggregate(keys=[X#19, Y#1], functions=[partial_mmin(D1#22)], output=[X#19, Y#1, mmin#42])
+                  +- *Project [X#19, Y#1, (D1#21 + D#2) AS D1#22]
+                     +- *CacheBuildSideShuffleHashJoin [Z#20], [X#0], Inner, BuildRight
+                        :- Exchange hashpartitioning(Z#20, 3)
+                        :  +- *AggregateRelation [X#19,Z#20,D1#21](path)
+                        +- Exchange hashpartitioning(X#0, 3)
+                           +- *Project [X#0, Y#1, D#2]
+                              +- Scan ExistingRDD[X#0,Y#1,D#2]
+
+Compile Datalog: 1032 ms
+Recursive Iterations: 766 ms
+Execution (Collect): 3685 ms
+Total: 8809 ms
+Result Size: 71
+
+====== 11/27 07:41:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 5496 ms
+
+RamSQL Parse: 230 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+All_paths.Sp , dist.NodeB ,  All_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM All_paths
+
+====== 11/27 07:42:05 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 7416 ms
+
+RamSQL Parse: 223 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as(
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+All_paths.Sp , dist.NodeB ,  All_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM All_paths
+
+====== 11/27 07:43:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 7083 ms
+
+RamSQL Parse: 224 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as (
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+All_paths.Sp , dist.NodeB ,  All_paths.Shortest_Dist+dist.Dist
+FROM all_paths , dist
+WHERE all_paths.Ep=dist.NodeA)
+)
+SELECT * FROM All_paths
+
+====== 11/27 07:43:56 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 7385 ms
+
+RamSQL Parse: 159 ms
+WITH recursive All_paths(Sp , Ep , min() as Shortest_Dist) as (
+(SELECT NodeA , NodeB , Dist FROM dist)
+)
+SELECT * FROM All_paths
+
+RamSQL Analyze: 91 ms
+RamSQL Optimize: 45 ms
+RamSQL Generate rules of `All_paths`: 253 ms
+
+RamSQL Analyze: 16 ms
+RamSQL Optimize: 4 ms
+RamSQL Generate rules of outermost query: 32 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+All_paths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+result(Sp9, Ep10, Shortest_Dist11) <- All_paths(Sp9, Ep10, Shortest_Dist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, Shortest_Dist11).
+
+====== 11/27 07:45:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+====== 11/27 07:45:29 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 7220 ms
+
+RamSQL Parse: 226 ms
+WITH recursive allpaths(Sp , Ep , min() as ShortestDist) as
+(SELECT NodeA , NodeB , Dist FROM dist)
+UNION
+(SELECT
+allpaths.Sp , dist.NodeB ,  allpaths.ShortestDist+dist.Dist
+FROM allpaths , dist
+WHERE allpaths.Ep=dist.NodeA)
+
+SELECT * FROM allpaths
+
+RamSQL Analyze: 382 ms
+RamSQL Optimize: 111 ms
+RamSQL Generate rules of `allpaths`: 624 ms
+
+RamSQL Analyze: 9 ms
+RamSQL Optimize: 3 ms
+RamSQL Generate rules of outermost query: 22 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer, Dist: integer)}).
+allpaths(NodeA0, NodeB1, mmin<Dist2>) <- dist(NodeA0, NodeB1, Dist2).
+allpaths(G16, NodeB1, mmin<C212>) <- allpaths(G16, G15, ShortestDist11), dist(G15, NodeB1, Dist2), C212 = (ShortestDist11 + Dist2).
+result(Sp9, Ep10, ShortestDist11) <- allpaths(Sp9, Ep10, ShortestDist11).
+
+== Datalog Query ==
+result(Sp9, Ep10, ShortestDist11).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_fff_fff(Sp9, Ep10, ShortestDist11), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_fff_fff(Sp9, Ep10, ShortestDist11), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(allpaths_fff_fff(Sp9, Ep10, ShortestDist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(allpaths_fff_fff(G16, G15, ShortestDist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_allpaths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(allpaths_fff_fff(Sp9, Ep10, ShortestDist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_allpaths_2_ffff, binding: ffff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_allpaths_2_ffff_ffff(G16, NodeB1, C212, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(allpaths_fff_fff(G16, G15, ShortestDist11), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bff_bff(G15, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer, Dist:integer)
+       PCGOrNode(C212 =_fb_fb +(ShortestDist11, Dist2), #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(allpaths_fff, binding: fff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(allpaths_fff_fff(NodeA0, NodeB1, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_1_ffff_ffff(NodeA0, NodeB1, mmin<Dist2>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_allpaths_1_ffff_ffff(NodeA0, NodeB1, Dist2, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_fff_fff(NodeA0, NodeB1, Dist2), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer, Dist:integer)
+     Recursive Rules:
+      PCGAndNode(allpaths_fff_fff(G16, NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_2_ffff_ffff(G16, NodeB1, mmin<C212>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: allpaths(Var_1, Var_2, Var_3) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, NodeB, mmin(Dist) as FSAggr_1) <AGGREGATE_FS>
+  2: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+Recursive Rules: 
+ 1: (G16, NodeB, mmin(C212) as FSAggr_1) <AGGREGATE_FS>
+  2: (G16, NodeB, ShortestDist11 + Dist as C212) <PROJECT>
+   3: (0.G15 = 1.NodeA) <JOIN>
+    4: allpaths(G16, G15, ShortestDist11) <RECURSIVE_RELATION>
+    4: dist(NodeA, NodeB, Dist) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias allpaths
++- 'Project [unresolvedalias('G16 AS Var_1#37, None), unresolvedalias('NodeB AS Var_2#38, None), unresolvedalias('FSAggr_1 AS Var_3#39, None)]
+   +- 'AggregateRecursion allpaths, [Driver], [1, 0, 0]
+      :- 'SubqueryAlias fs_aggregate_allpaths_1
+      :  +- 'MonotonicAggregate ['dist.NodeA, 'dist.NodeB], [unresolvedalias('dist.NodeA AS NodeA#27, None), unresolvedalias('dist.NodeB AS NodeB#28, None), unresolvedalias('mmin('dist.Dist) AS FSAggr_1#29, None)], [1, 0, 0]
+      :     +- 'UnresolvedRelation `dist`
+      +- 'SubqueryAlias fs_aggregate_allpaths_2
+         +- 'MonotonicAggregate ['allpaths1.G16, 'dist2.NodeB], [unresolvedalias('allpaths1.G16 AS G16#34, None), unresolvedalias('dist2.NodeB AS NodeB#35, None), unresolvedalias('mmin('C1) AS FSAggr_1#36, None)], [1, 0, 0]
+            +- 'Project ['allpaths1.G16, 'dist2.NodeB, unresolvedalias(('allpaths1.ShortestDist11 + 'dist2.Dist) AS C1#33, None)]
+               +- 'Join Inner, ('allpaths1.G15 = 'dist2.NodeA)
+                  :- SubqueryAlias allpaths1
+                  :  +- AggregateRelation allpaths, [G16#30, G15#31, ShortestDist11#32], [1, 0, 0]
+                  +- 'CacheHint
+                     +- 'SubqueryAlias dist2
+                        +- 'Project [*]
+                           +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int, Var_3: int
+SubqueryAlias allpaths
++- Project [G16#34 AS Var_1#37, NodeB#35 AS Var_2#38, FSAggr_1#36 AS Var_3#39]
+   +- AggregateRecursion allpaths, [Driver], [1, 0, 0]
+      :- SubqueryAlias fs_aggregate_allpaths_1
+      :  +- MonotonicAggregate [NodeA#0, NodeB#1], [NodeA#0 AS NodeA#27, NodeB#1 AS NodeB#28, mmin(Dist#2) AS FSAggr_1#29], [1, 0, 0]
+      :     +- SubqueryAlias dist
+      :        +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+      +- SubqueryAlias fs_aggregate_allpaths_2
+         +- MonotonicAggregate [G16#30, NodeB#1], [G16#30 AS G16#34, NodeB#1 AS NodeB#35, mmin(C1#33) AS FSAggr_1#36], [1, 0, 0]
+            +- Project [G16#30, NodeB#1, (ShortestDist11#32 + Dist#2) AS C1#33]
+               +- Join Inner, (G15#31 = NodeA#0)
+                  :- SubqueryAlias allpaths1
+                  :  +- AggregateRelation allpaths, [G16#30, G15#31, ShortestDist11#32], [1, 0, 0]
+                  +- CacheHint
+                     +- SubqueryAlias dist2
+                        +- Project [NodeA#0, NodeB#1, Dist#2]
+                           +- SubqueryAlias dist
+                              +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Optimized Logical Plan ==
+Project [G16#34 AS Var_1#37, NodeB#35 AS Var_2#38, FSAggr_1#36 AS Var_3#39]
++- AggregateRecursion allpaths, [Driver], [1, 0, 0]
+   :- MonotonicAggregate [NodeA#0, NodeB#1], [NodeA#0 AS NodeA#27, NodeB#1 AS NodeB#28, mmin(Dist#2) AS FSAggr_1#29], [1, 0, 0]
+   :  +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+   +- MonotonicAggregate [G16#30, NodeB#1], [G16#30 AS G16#34, NodeB#1 AS NodeB#35, mmin(C1#33) AS FSAggr_1#36], [1, 0, 0]
+      +- Project [G16#30, NodeB#1, (ShortestDist11#32 + Dist#2) AS C1#33]
+         +- Join Inner, (G15#31 = NodeA#0)
+            :- AggregateRelation allpaths, [G16#30, G15#31, ShortestDist11#32], [1, 0, 0]
+            +- CacheHint
+               +- Project [NodeA#0, NodeB#1, Dist#2]
+                  +- LogicalRDD [NodeA#0, NodeB#1, Dist#2]
+
+== Physical Plan ==
+*Project [G16#34 AS Var_1#37, NodeB#35 AS Var_2#38, FSAggr_1#36 AS Var_3#39]
++- AggregateRecursion [G16#34,NodeB#35,FSAggr_1#36] (Driver) [allpaths][1,0,0]
+   :- ExitAggrExchange(key=[NodeA#0,NodeB#1], functions=[mmin(Dist#2)], output=[NodeA#0,NodeB#1,mmin#44], iterType=Tungsten) hashpartitioning(NodeA#0 AS NodeA#27, 3)
+   :  +- *HashAggregate(keys=[NodeA#0, NodeB#1], functions=[partial_mmin(Dist#2)], output=[NodeA#0, NodeB#1, mmin#44])
+   :     +- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+   +- RecAggrExchange(key=[G16#30,NodeB#1], functions=[mmin(C1#33)], output=[G16#34,NodeB#35,FSAggr_1#36], iterType=Tungsten) hashpartitioning(G16#30 AS G16#34, 3)
+      +- *HashAggregate(keys=[G16#30, NodeB#1], functions=[partial_mmin(C1#33)], output=[G16#30, NodeB#1, mmin#47])
+         +- *Project [G16#30, NodeB#1, (ShortestDist11#32 + Dist#2) AS C1#33]
+            +- *CacheBuildSideShuffleHashJoin [G15#31], [NodeA#0], Inner, BuildRight
+               :- Exchange hashpartitioning(G15#31, 3)
+               :  +- *AggregateRelation [G16#30,G15#31,ShortestDist11#32](allpaths)
+               +- Exchange hashpartitioning(NodeA#0, 3)
+                  +- *Project [NodeA#0, NodeB#1, Dist#2]
+                     +- Scan ExistingRDD[NodeA#0,NodeB#1,Dist#2]
+
+Recursive Iterations: 1426 ms
+[Success - Execution Finished]
+Compile RamSQL: 2283 ms
+Execution (Collect): 6624 ms
+Total: 16219 ms
+Result Size: 71
+
+====== 11/30 13:17:10 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 2212 ms
+
+== Datalog ObjectText ==
+database({dist(X: integer, Y: integer)}).
+cc(A,mmin<A>) <- dist(A,_).
+cc(C,mmin<B>) <- cc(A,B), dist(A,C).
+cc2(A,min<B>) <- cc(A,B).
+concomp(countd<A>) <- cc2(_,A).
+
+== Datalog Query ==
+concomp(Z).
+== Compiled PCG Tree ==
+
+PCGOrNode(concomp_f_f(Z), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(concomp_f_f(Aggr_1), rule#: 4.2, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(aggregate_concomp_f_f(countd<A>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+   PCGAndNode(aggregate_concomp_f_f(A), rule#: 4.1, #Children: 1, predicateType: DERIVED)
+    PCGOrNode(cc2_ff_ff(_, A), #Children: 1, predicateType: DERIVED, isRecursive: No)
+     PCGAndNode(cc2_ff_ff(A, Aggr_1), rule#: 3.2, #Children: 1, predicateType: DERIVED)
+      PCGOrNode(aggregate_cc2_ff_ff(A, min<B>), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+       PCGAndNode(aggregate_cc2_ff_ff(A, B), rule#: 3.1, #Children: 1, predicateType: DERIVED)
+        PCGOrNode(cc_ff_ff(A, B), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+         Clique 1
+          Parents: 
+           1) PCGOrNode(cc_ff_ff(A, B), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+           2) PCGOrNode(fs_aggregate_cc_2_fff_fff(C, mmin<B>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+           3) PCGOrNode(cc_ff_ff(A, B), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+          Clique Predicates: 
+          1) CliquePredicate(fs_aggregate_cc_2_fff, binding: fff, #ExitRules: 0, #RecursiveRules: 1)
+           Exit Rules: NONE
+           Recursive Rules:
+            PCGAndNode(fs_aggregate_cc_2_fff_fff(C, B, nil), rule#: 2.1, #Children: 2, predicateType: DERIVED)
+             PCGOrNode(cc_ff_ff(A, B), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+             PCGOrNode(dist_bf_bf(A, C), #Children: 1, predicateType: BASE)
+              dist(X:integer, Y:integer)
+          2) CliquePredicate(cc_ff, binding: ff, #ExitRules: 1, #RecursiveRules: 1)
+           Exit Rules:
+            PCGAndNode(cc_ff_ff(A, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+             PCGOrNode(fs_aggregate_cc_1_fff_fff(A, mmin<A>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+              PCGAndNode(fs_aggregate_cc_1_fff_fff(A, A, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+               PCGOrNode(dist_ff_ff(A, _), #Children: 1, predicateType: BASE)
+                dist(X:integer, Y:integer)
+           Recursive Rules:
+            PCGAndNode(cc_ff_ff(C, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+             PCGOrNode(fs_aggregate_cc_2_fff_fff(C, mmin<B>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+         End Clique 1
+== Operator Program ==
+
+0: (countd(A) as Z) <AGGREGATE>
+ 1: (Aggr_1 as A) <PROJECT>
+  2: (Var_1, min(Var_2) as Aggr_1) <AGGREGATE>
+   3: cc(Var_1, Var_2) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+   Exit Rules: 
+    4: (X, mmin(X) as FSAggr_1) <AGGREGATE_FS>
+     5: (X) <PROJECT>
+      6: dist(X, Y) <BASE_RELATION>
+   Recursive Rules: 
+    4: (Y, mmin(B) as FSAggr_1) <AGGREGATE_FS>
+     5: (Y, B) <PROJECT>
+      6: (0.A = 1.X) <JOIN>
+       7: cc(A, B) <RECURSIVE_RELATION>
+       7: dist(X, Y) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias aggregate_concomp
++- 'Aggregate [unresolvedalias('count('A1) AS Z#23, None)]
+   +- 'Project [unresolvedalias('aggregate_cc2.Aggr_1 AS A1#22, None)]
+      +- 'SubqueryAlias aggregate_cc2
+         +- 'Aggregate ['cc.Var_1], [unresolvedalias('cc.Var_1 AS Var_1#20, None), unresolvedalias('min('cc.Var_2) AS Aggr_1#21, None)]
+            +- 'SubqueryAlias cc
+               +- 'Project [unresolvedalias('Y AS Var_1#18, None), unresolvedalias('FSAggr_1 AS Var_2#19, None)]
+                  +- 'AggregateRecursion cc, [Driver], [1, 0]
+                     :- 'SubqueryAlias fs_aggregate_cc_1
+                     :  +- 'MonotonicAggregate ['dist.X], [unresolvedalias('dist.X AS X#12, None), unresolvedalias('mmin('dist.X) AS FSAggr_1#13, None)], [1, 0]
+                     :     +- 'Project ['dist.X]
+                     :        +- 'UnresolvedRelation `dist`
+                     +- 'SubqueryAlias fs_aggregate_cc_2
+                        +- 'MonotonicAggregate ['dist2.Y], [unresolvedalias('dist2.Y AS Y#16, None), unresolvedalias('mmin('cc1.B) AS FSAggr_1#17, None)], [1, 0]
+                           +- 'Project ['dist2.Y, 'cc1.B]
+                              +- 'Join Inner, ('cc1.A = 'dist2.X)
+                                 :- SubqueryAlias cc1
+                                 :  +- AggregateRelation cc, [A#14, B#15], [1, 0]
+                                 +- 'CacheHint
+                                    +- 'SubqueryAlias dist2
+                                       +- 'Project [*]
+                                          +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+Z: bigint
+SubqueryAlias aggregate_concomp
++- Aggregate [count(distinct A1#22) AS Z#23L]
+   +- Project [Aggr_1#21 AS A1#22]
+      +- SubqueryAlias aggregate_cc2
+         +- Aggregate [Var_1#18], [Var_1#18 AS Var_1#20, min(Var_2#19) AS Aggr_1#21]
+            +- SubqueryAlias cc
+               +- Project [Y#16 AS Var_1#18, FSAggr_1#17 AS Var_2#19]
+                  +- AggregateRecursion cc, [Driver], [1, 0]
+                     :- SubqueryAlias fs_aggregate_cc_1
+                     :  +- MonotonicAggregate [X#0], [X#0 AS X#12, mmin(X#0) AS FSAggr_1#13], [1, 0]
+                     :     +- Project [X#0]
+                     :        +- SubqueryAlias dist
+                     :           +- LogicalRDD [X#0, Y#1]
+                     +- SubqueryAlias fs_aggregate_cc_2
+                        +- MonotonicAggregate [Y#1], [Y#1 AS Y#16, mmin(B#15) AS FSAggr_1#17], [1, 0]
+                           +- Project [Y#1, B#15]
+                              +- Join Inner, (A#14 = X#0)
+                                 :- SubqueryAlias cc1
+                                 :  +- AggregateRelation cc, [A#14, B#15], [1, 0]
+                                 +- CacheHint
+                                    +- SubqueryAlias dist2
+                                       +- Project [X#0, Y#1]
+                                          +- SubqueryAlias dist
+                                             +- LogicalRDD [X#0, Y#1]
+
+== Optimized Logical Plan ==
+Aggregate [count(distinct A1#22) AS Z#23L]
++- Aggregate [Var_1#18], [min(Var_2#19) AS A1#22]
+   +- Project [Y#16 AS Var_1#18, FSAggr_1#17 AS Var_2#19]
+      +- AggregateRecursion cc, [Driver], [1, 0]
+         :- MonotonicAggregate [X#0], [X#0 AS X#12, mmin(X#0) AS FSAggr_1#13], [1, 0]
+         :  +- Project [X#0]
+         :     +- LogicalRDD [X#0, Y#1]
+         +- MonotonicAggregate [Y#1], [Y#1 AS Y#16, mmin(B#15) AS FSAggr_1#17], [1, 0]
+            +- Project [Y#1, B#15]
+               +- Join Inner, (A#14 = X#0)
+                  :- AggregateRelation cc, [A#14, B#15], [1, 0]
+                  +- CacheHint
+                     +- Project [X#0, Y#1]
+                        +- LogicalRDD [X#0, Y#1]
+
+== Physical Plan ==
+*HashAggregate(keys=[], functions=[count(distinct A1#22)], output=[Z#23L])
++- Exchange SinglePartition
+   +- *HashAggregate(keys=[], functions=[partial_count(distinct A1#22)], output=[count#30L])
+      +- *HashAggregate(keys=[A1#22], functions=[], output=[A1#22])
+         +- Exchange hashpartitioning(A1#22, 3)
+            +- *HashAggregate(keys=[A1#22], functions=[], output=[A1#22])
+               +- *HashAggregate(keys=[Var_1#18], functions=[min(Var_2#19)], output=[A1#22])
+                  +- Exchange hashpartitioning(Var_1#18, 3)
+                     +- *HashAggregate(keys=[Var_1#18], functions=[partial_min(Var_2#19)], output=[Var_1#18, min#33])
+                        +- *Project [Y#16 AS Var_1#18, FSAggr_1#17 AS Var_2#19]
+                           +- AggregateRecursion [Y#16,FSAggr_1#17] (Driver) [cc][1,0]
+                              :- ExitAggrExchange(key=[X#0], functions=[mmin(X#0)], output=[X#0,mmin#36], iterType=Tungsten) hashpartitioning(X#0 AS X#12, 3)
+                              :  +- *HashAggregate(keys=[X#0], functions=[partial_mmin(X#0)], output=[X#0, mmin#36])
+                              :     +- *Project [X#0]
+                              :        +- Scan ExistingRDD[X#0,Y#1]
+                              +- RecAggrExchange(key=[Y#1], functions=[mmin(B#15)], output=[Y#16,FSAggr_1#17], iterType=Tungsten) hashpartitioning(Y#1 AS Y#16, 3)
+                                 +- *HashAggregate(keys=[Y#1], functions=[partial_mmin(B#15)], output=[Y#1, mmin#39])
+                                    +- *Project [Y#1, B#15]
+                                       +- *CacheBuildSideShuffleHashJoin [A#14], [X#0], Inner, BuildRight
+                                          :- *AggregateRelation [A#14,B#15](cc)
+                                          +- Exchange hashpartitioning(X#0, 3)
+                                             +- *Project [X#0, Y#1]
+                                                +- Scan ExistingRDD[X#0,Y#1]
+
+Compile Datalog: 624 ms
+Recursive Iterations: 453 ms
+Execution (Collect): 2821 ms
+Total: 5664 ms
+Result Size: 1
+
+====== 11/30 13:25:08 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 2209 ms
+
+RamSQL Parse: 68 ms
+WITH recursive allpaths(Sp , min() as Ep) as
+(SELECT NodeA , NodeB t FROM dist)
+UNION
+(SELECT
+dist.NodeB, allpaths.Ep
+FROM allpaths , dist
+WHERE allpaths.Sp=dist.NodeA and allpaths.Ep!=dist.NodeB)
+
+SELECT * FROM allpaths
+
+RamSQL Analyze: 114 ms
+RamSQL Optimize: 44 ms
+
+====== 11/30 13:26:22 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 2103 ms
+
+RamSQL Parse: 84 ms
+WITH recursive allpaths(Sp , min() as Ep) as
+(SELECT NodeA , NodeB FROM dist)
+UNION
+(SELECT
+dist.NodeB, allpaths.Ep
+FROM allpaths , dist
+WHERE allpaths.Sp=dist.NodeA and allpaths.Ep!=dist.NodeB)
+
+SELECT * FROM allpaths
+
+RamSQL Analyze: 134 ms
+RamSQL Optimize: 29 ms
+RamSQL Generate rules of `allpaths`: 198 ms
+
+RamSQL Analyze: 3 ms
+RamSQL Optimize: 1 ms
+RamSQL Generate rules of outermost query: 8 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer)}).
+allpaths(NodeA0, mmin<NodeB1>) <- dist(NodeA0, NodeB1).
+allpaths(NodeB1, mmin<G12>) <- allpaths(G11, G12), dist(G11, NodeB1), G12 ~= NodeB1.
+result(Sp7, Ep8) <- allpaths(Sp7, Ep8).
+
+== Datalog Query ==
+result(Sp7, Ep8).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_ff_ff(Sp7, Ep8), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(allpaths_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(allpaths_ff_ff(G11, G12), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, mmin<G12>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(allpaths_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_allpaths_2_fff, binding: fff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, G12, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(allpaths_ff_ff(G11, G12), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bf_bf(G11, NodeB1), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer)
+       PCGOrNode(G12 ~=_bb_bb NodeB1, #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(allpaths_ff, binding: ff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(allpaths_ff_ff(NodeA0, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_1_fff_fff(NodeA0, mmin<NodeB1>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_allpaths_1_fff_fff(NodeA0, NodeB1, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_ff_ff(NodeA0, NodeB1), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer)
+     Recursive Rules:
+      PCGAndNode(allpaths_ff_ff(NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, mmin<G12>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: allpaths(Var_1, Var_2) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, mmin(NodeB) as FSAggr_1) <AGGREGATE_FS>
+  2: dist(NodeA, NodeB) <BASE_RELATION>
+Recursive Rules: 
+ 1: (NodeB, mmin(G12) as FSAggr_1) <AGGREGATE_FS>
+  2: (NodeB, G12) <PROJECT>
+   3: G12 ~= NodeB <FILTER>
+    4: (0.G11 = 1.NodeA) <JOIN>
+     5: allpaths(G11, G12) <RECURSIVE_RELATION>
+     5: dist(NodeA, NodeB) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias allpaths
++- 'Project [unresolvedalias('NodeB AS Var_1#27, None), unresolvedalias('FSAggr_1 AS Var_2#28, None)]
+   +- 'AggregateRecursion allpaths, [Driver], [1, 0]
+      :- 'SubqueryAlias fs_aggregate_allpaths_1
+      :  +- 'MonotonicAggregate ['dist.NodeA], [unresolvedalias('dist.NodeA AS NodeA#21, None), unresolvedalias('mmin('dist.NodeB) AS FSAggr_1#22, None)], [1, 0]
+      :     +- 'UnresolvedRelation `dist`
+      +- 'SubqueryAlias fs_aggregate_allpaths_2
+         +- 'MonotonicAggregate ['dist2.NodeB], [unresolvedalias('dist2.NodeB AS NodeB#25, None), unresolvedalias('mmin('allpaths1.G12) AS FSAggr_1#26, None)], [1, 0]
+            +- 'Project ['dist2.NodeB, 'allpaths1.G12]
+               +- 'Filter NOT ('allpaths1.G12 = 'dist2.NodeB)
+                  +- 'Join Inner, ('allpaths1.G11 = 'dist2.NodeA)
+                     :- SubqueryAlias allpaths1
+                     :  +- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+                     +- 'CacheHint
+                        +- 'SubqueryAlias dist2
+                           +- 'Project [*]
+                              +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int
+SubqueryAlias allpaths
++- Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
+   +- AggregateRecursion allpaths, [Driver], [1, 0]
+      :- SubqueryAlias fs_aggregate_allpaths_1
+      :  +- MonotonicAggregate [NodeA#0], [NodeA#0 AS NodeA#21, mmin(NodeB#1) AS FSAggr_1#22], [1, 0]
+      :     +- SubqueryAlias dist
+      :        +- LogicalRDD [NodeA#0, NodeB#1]
+      +- SubqueryAlias fs_aggregate_allpaths_2
+         +- MonotonicAggregate [NodeB#1], [NodeB#1 AS NodeB#25, mmin(G12#24) AS FSAggr_1#26], [1, 0]
+            +- Project [NodeB#1, G12#24]
+               +- Filter NOT (G12#24 = NodeB#1)
+                  +- Join Inner, (G11#23 = NodeA#0)
+                     :- SubqueryAlias allpaths1
+                     :  +- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+                     +- CacheHint
+                        +- SubqueryAlias dist2
+                           +- Project [NodeA#0, NodeB#1]
+                              +- SubqueryAlias dist
+                                 +- LogicalRDD [NodeA#0, NodeB#1]
+
+== Optimized Logical Plan ==
+Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
++- AggregateRecursion allpaths, [Driver], [1, 0]
+   :- MonotonicAggregate [NodeA#0], [NodeA#0 AS NodeA#21, mmin(NodeB#1) AS FSAggr_1#22], [1, 0]
+   :  +- LogicalRDD [NodeA#0, NodeB#1]
+   +- MonotonicAggregate [NodeB#1], [NodeB#1 AS NodeB#25, mmin(G12#24) AS FSAggr_1#26], [1, 0]
+      +- Project [NodeB#1, G12#24]
+         +- Join Inner, (NOT (G12#24 = NodeB#1) && (G11#23 = NodeA#0))
+            :- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+            +- CacheHint
+               +- Project [NodeA#0, NodeB#1]
+                  +- LogicalRDD [NodeA#0, NodeB#1]
+
+== Physical Plan ==
+*Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
++- AggregateRecursion [NodeB#25,FSAggr_1#26] (Driver) [allpaths][1,0]
+   :- ExitAggrExchange(key=[NodeA#0], functions=[mmin(NodeB#1)], output=[NodeA#0,mmin#33], iterType=Tungsten) hashpartitioning(NodeA#0 AS NodeA#21, 3)
+   :  +- *HashAggregate(keys=[NodeA#0], functions=[partial_mmin(NodeB#1)], output=[NodeA#0, mmin#33])
+   :     +- Scan ExistingRDD[NodeA#0,NodeB#1]
+   +- RecAggrExchange(key=[NodeB#1], functions=[mmin(G12#24)], output=[NodeB#25,FSAggr_1#26], iterType=Tungsten) hashpartitioning(NodeB#1 AS NodeB#25, 3)
+      +- *HashAggregate(keys=[NodeB#1], functions=[partial_mmin(G12#24)], output=[NodeB#1, mmin#36])
+         +- *Project [NodeB#1, G12#24]
+            +- *CacheBuildSideShuffleHashJoin [G11#23], [NodeA#0], Inner, BuildRight, NOT (G12#24 = NodeB#1)
+               :- *AggregateRelation [G11#23,G12#24](allpaths)
+               +- Exchange hashpartitioning(NodeA#0, 3)
+                  +- *Project [NodeA#0, NodeB#1]
+                     +- Scan ExistingRDD[NodeA#0,NodeB#1]
+
+Recursive Iterations: 399 ms
+[Success - Execution Finished]
+Compile RamSQL: 759 ms
+Execution (Collect): 2313 ms
+Total: 5213 ms
+Result Size: 10
+
+====== 11/30 13:28:34 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error ======
+
+Load: 1881 ms
+
+RamSQL Parse: 84 ms
+WITH recursive allpaths(Sp , min() as Ep) as
+(SELECT NodeA , NodeA FROM dist)
+UNION
+(SELECT
+dist.NodeB, allpaths.Ep
+FROM allpaths , dist
+WHERE allpaths.Sp=dist.NodeA and allpaths.Ep!=dist.NodeB)
+
+SELECT * FROM allpaths
+
+RamSQL Analyze: 114 ms
+RamSQL Optimize: 38 ms
+RamSQL Generate rules of `allpaths`: 207 ms
+
+RamSQL Analyze: 5 ms
+RamSQL Optimize: 1 ms
+RamSQL Generate rules of outermost query: 10 ms
+
+== Datalog ObjectText ==
+database({dist(NodeA: integer, NodeB: integer)}).
+allpaths(NodeA0, mmin<NodeA0>) <- dist(NodeA0, _).
+allpaths(NodeB1, mmin<G12>) <- allpaths(G11, G12), dist(G11, NodeB1), G12 ~= NodeB1.
+result(Sp7, Ep8) <- allpaths(Sp7, Ep8).
+
+== Datalog Query ==
+result(Sp7, Ep8).
+== Compiled PCG Tree ==
+
+PCGOrNode(result_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: No)
+ PCGAndNode(result_ff_ff(Sp7, Ep8), rule#: 3, #Children: 1, predicateType: DERIVED)
+  PCGOrNode(allpaths_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+   Clique 1
+    Parents: 
+     1) PCGOrNode(allpaths_ff_ff(G11, G12), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+     2) PCGOrNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, mmin<G12>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+     3) PCGOrNode(allpaths_ff_ff(Sp7, Ep8), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+    Clique Predicates: 
+    1) CliquePredicate(fs_aggregate_allpaths_2_fff, binding: fff, #ExitRules: 0, #RecursiveRules: 1)
+     Exit Rules: NONE
+     Recursive Rules:
+      PCGAndNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, G12, nil), rule#: 2.1, #Children: 3, predicateType: DERIVED)
+       PCGOrNode(allpaths_ff_ff(G11, G12), #Children: 1, predicateType: DERIVED, isRecursive: Yes)
+       PCGOrNode(dist_bf_bf(G11, NodeB1), #Children: 1, predicateType: BASE)
+        dist(NodeA:integer, NodeB:integer)
+       PCGOrNode(G12 ~=_bb_bb NodeB1, #Children: 0, predicateType: BUILT_IN, isRecursive: No)
+    2) CliquePredicate(allpaths_ff, binding: ff, #ExitRules: 1, #RecursiveRules: 1)
+     Exit Rules:
+      PCGAndNode(allpaths_ff_ff(NodeA0, FSAggr_1), rule#: 1.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_1_fff_fff(NodeA0, mmin<NodeA0>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: No)
+        PCGAndNode(fs_aggregate_allpaths_1_fff_fff(NodeA0, NodeA0, nil), rule#: 1.1, #Children: 1, predicateType: DERIVED)
+         PCGOrNode(dist_ff_ff(NodeA0, _), #Children: 1, predicateType: BASE)
+          dist(NodeA:integer, NodeB:integer)
+     Recursive Rules:
+      PCGAndNode(allpaths_ff_ff(NodeB1, FSAggr_1), rule#: 2.2, #Children: 1, predicateType: DERIVED)
+       PCGOrNode(fs_aggregate_allpaths_2_fff_fff(NodeB1, mmin<G12>, FSAggr_1), #Children: 1, predicateType: BUILT_IN, isRecursive: Yes)
+   End Clique 1
+== Operator Program ==
+
+0: allpaths(Var_1, Var_2) <RECURSIVE_CLIQUE>(Recursion: NONLINEAR, Evaluation Type: MonotonicSemiNaive)
+Exit Rules: 
+ 1: (NodeA, mmin(NodeA) as FSAggr_1) <AGGREGATE_FS>
+  2: (NodeA) <PROJECT>
+   3: dist(NodeA, NodeB) <BASE_RELATION>
+Recursive Rules: 
+ 1: (NodeB, mmin(G12) as FSAggr_1) <AGGREGATE_FS>
+  2: (NodeB, G12) <PROJECT>
+   3: G12 ~= NodeB <FILTER>
+    4: (0.G11 = 1.NodeA) <JOIN>
+     5: allpaths(G11, G12) <RECURSIVE_RELATION>
+     5: dist(NodeA, NodeB) <BASE_RELATION>
+
+== Parsed Logical Plan ==
+'SubqueryAlias allpaths
++- 'Project [unresolvedalias('NodeB AS Var_1#27, None), unresolvedalias('FSAggr_1 AS Var_2#28, None)]
+   +- 'AggregateRecursion allpaths, [Driver], [1, 0]
+      :- 'SubqueryAlias fs_aggregate_allpaths_1
+      :  +- 'MonotonicAggregate ['dist.NodeA], [unresolvedalias('dist.NodeA AS NodeA#21, None), unresolvedalias('mmin('dist.NodeA) AS FSAggr_1#22, None)], [1, 0]
+      :     +- 'Project ['dist.NodeA]
+      :        +- 'UnresolvedRelation `dist`
+      +- 'SubqueryAlias fs_aggregate_allpaths_2
+         +- 'MonotonicAggregate ['dist2.NodeB], [unresolvedalias('dist2.NodeB AS NodeB#25, None), unresolvedalias('mmin('allpaths1.G12) AS FSAggr_1#26, None)], [1, 0]
+            +- 'Project ['dist2.NodeB, 'allpaths1.G12]
+               +- 'Filter NOT ('allpaths1.G12 = 'dist2.NodeB)
+                  +- 'Join Inner, ('allpaths1.G11 = 'dist2.NodeA)
+                     :- SubqueryAlias allpaths1
+                     :  +- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+                     +- 'CacheHint
+                        +- 'SubqueryAlias dist2
+                           +- 'Project [*]
+                              +- 'UnresolvedRelation `dist`
+
+== Analyzed Logical Plan ==
+Var_1: int, Var_2: int
+SubqueryAlias allpaths
++- Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
+   +- AggregateRecursion allpaths, [Driver], [1, 0]
+      :- SubqueryAlias fs_aggregate_allpaths_1
+      :  +- MonotonicAggregate [NodeA#0], [NodeA#0 AS NodeA#21, mmin(NodeA#0) AS FSAggr_1#22], [1, 0]
+      :     +- Project [NodeA#0]
+      :        +- SubqueryAlias dist
+      :           +- LogicalRDD [NodeA#0, NodeB#1]
+      +- SubqueryAlias fs_aggregate_allpaths_2
+         +- MonotonicAggregate [NodeB#1], [NodeB#1 AS NodeB#25, mmin(G12#24) AS FSAggr_1#26], [1, 0]
+            +- Project [NodeB#1, G12#24]
+               +- Filter NOT (G12#24 = NodeB#1)
+                  +- Join Inner, (G11#23 = NodeA#0)
+                     :- SubqueryAlias allpaths1
+                     :  +- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+                     +- CacheHint
+                        +- SubqueryAlias dist2
+                           +- Project [NodeA#0, NodeB#1]
+                              +- SubqueryAlias dist
+                                 +- LogicalRDD [NodeA#0, NodeB#1]
+
+== Optimized Logical Plan ==
+Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
++- AggregateRecursion allpaths, [Driver], [1, 0]
+   :- MonotonicAggregate [NodeA#0], [NodeA#0 AS NodeA#21, mmin(NodeA#0) AS FSAggr_1#22], [1, 0]
+   :  +- Project [NodeA#0]
+   :     +- LogicalRDD [NodeA#0, NodeB#1]
+   +- MonotonicAggregate [NodeB#1], [NodeB#1 AS NodeB#25, mmin(G12#24) AS FSAggr_1#26], [1, 0]
+      +- Project [NodeB#1, G12#24]
+         +- Join Inner, (NOT (G12#24 = NodeB#1) && (G11#23 = NodeA#0))
+            :- AggregateRelation allpaths, [G11#23, G12#24], [1, 0]
+            +- CacheHint
+               +- Project [NodeA#0, NodeB#1]
+                  +- LogicalRDD [NodeA#0, NodeB#1]
+
+== Physical Plan ==
+*Project [NodeB#25 AS Var_1#27, FSAggr_1#26 AS Var_2#28]
++- AggregateRecursion [NodeB#25,FSAggr_1#26] (Driver) [allpaths][1,0]
+   :- ExitAggrExchange(key=[NodeA#0], functions=[mmin(NodeA#0)], output=[NodeA#0,mmin#33], iterType=Tungsten) hashpartitioning(NodeA#0 AS NodeA#21, 3)
+   :  +- *HashAggregate(keys=[NodeA#0], functions=[partial_mmin(NodeA#0)], output=[NodeA#0, mmin#33])
+   :     +- *Project [NodeA#0]
+   :        +- Scan ExistingRDD[NodeA#0,NodeB#1]
+   +- RecAggrExchange(key=[NodeB#1], functions=[mmin(G12#24)], output=[NodeB#25,FSAggr_1#26], iterType=Tungsten) hashpartitioning(NodeB#1 AS NodeB#25, 3)
+      +- *HashAggregate(keys=[NodeB#1], functions=[partial_mmin(G12#24)], output=[NodeB#1, mmin#36])
+         +- *Project [NodeB#1, G12#24]
+            +- *CacheBuildSideShuffleHashJoin [G11#23], [NodeA#0], Inner, BuildRight, NOT (G12#24 = NodeB#1)
+               :- *AggregateRelation [G11#23,G12#24](allpaths)
+               +- Exchange hashpartitioning(NodeA#0, 3)
+                  +- *Project [NodeA#0, NodeB#1]
+                     +- Scan ExistingRDD[NodeA#0,NodeB#1]
+
+Recursive Iterations: 456 ms
+[Success - Execution Finished]
+Compile RamSQL: 804 ms
+Execution (Collect): 2192 ms
+Total: 4917 ms
+Result Size: 10

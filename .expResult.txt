@@ -1,0 +1,150 @@
+
+
+11/27 05:05:57 tc_ll/arc=arc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 7779 ms, Recursive Iterations: 414 ms, Compile RamSQL: 2187 ms, Execution (Collect): 4743 ms, Total: 14783 ms, Result Size: 11
+
+11/27 05:06:12 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error
+Load: 86 ms, Recursive Iterations: 198 ms, Compile RamSQL: 325 ms, Execution (Collect): 986 ms, Total: 1423 ms, Result Size: 5
+
+11/27 06:22:33 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3892 ms
+
+11/27 06:25:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3650 ms
+
+11/27 06:27:07 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3935 ms
+
+11/27 06:28:08 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3758 ms, Compile Datalog: 323 ms, Execution (Collect): 1488 ms, Total: 5574 ms, Result Size: 15
+
+11/27 06:28:32 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3888 ms
+
+11/27 06:30:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4219 ms, Compile Datalog: 878 ms
+
+11/27 06:31:08 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4503 ms
+
+11/27 06:32:29 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3946 ms, Compile Datalog: 393 ms, Execution (Collect): 1768 ms, Total: 6118 ms, Result Size: 15
+
+11/27 06:37:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4115 ms, Compile Datalog: 757 ms
+
+11/27 06:45:55 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4534 ms, Compile Datalog: 911 ms
+
+11/27 06:46:38 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4287 ms, Compile Datalog: 364 ms, Execution (Collect): 1773 ms, Total: 6434 ms, Result Size: 15
+
+11/27 06:47:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4338 ms
+
+11/27 06:48:23 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3842 ms
+
+11/27 06:53:49 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4259 ms
+
+11/27 06:55:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4997 ms
+
+11/27 06:56:27 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4624 ms, Compile Datalog: 1244 ms, Recursive Iterations: 820 ms, Execution (Collect): 4715 ms, Total: 10593 ms, Result Size: 71
+
+11/27 07:19:04 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error
+Load: 3815 ms, Recursive Iterations: 157 ms, Compile RamSQL: 1700 ms, Execution (Collect): 1861 ms, Total: 7420 ms, Result Size: 5
+
+11/27 07:20:35 reach/rc=rc1/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/startvertex=1/log=error
+Load: 3793 ms, Recursive Iterations: 182 ms, Compile RamSQL: 1710 ms, Execution (Collect): 2013 ms, Total: 7561 ms, Result Size: 5
+
+11/27 07:21:24 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3529 ms, Compile RamSQL: 679 ms, Execution (Collect): 1619 ms, Total: 5861 ms, Result Size: 15
+
+11/27 07:22:00 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3803 ms, Compile RamSQL: 795 ms, Execution (Collect): 2119 ms, Total: 6759 ms, Result Size: 15
+
+11/27 07:23:43 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4197 ms
+
+11/27 07:24:35 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4377 ms
+
+11/27 07:24:56 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4335 ms, Compile RamSQL: 927 ms, Execution (Collect): 2426 ms, Total: 7756 ms, Result Size: 15
+
+11/27 07:25:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3963 ms
+
+11/27 07:25:38 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4110 ms
+
+11/27 07:26:39 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4250 ms
+
+11/27 07:27:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4454 ms
+
+11/27 07:28:57 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3900 ms
+
+11/27 07:29:48 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4615 ms
+
+11/27 07:31:40 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3984 ms
+
+11/27 07:32:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3812 ms
+
+11/27 07:33:52 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3813 ms, Compile Datalog: 1062 ms, Recursive Iterations: 704 ms, Execution (Collect): 4468 ms, Total: 9355 ms, Result Size: 71
+
+11/27 07:34:13 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3845 ms
+
+11/27 07:34:58 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4186 ms
+
+11/27 07:36:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4272 ms
+
+11/27 07:39:31 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 3808 ms
+
+11/27 07:39:50 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4329 ms
+
+11/27 07:40:22 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 4082 ms, Compile Datalog: 1032 ms, Recursive Iterations: 766 ms, Execution (Collect): 3685 ms, Total: 8809 ms, Result Size: 71
+
+11/27 07:41:20 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 5496 ms
+
+11/27 07:42:05 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 7416 ms
+
+11/27 07:43:14 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 7083 ms
+
+11/27 07:43:56 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 7385 ms
+
+11/27 07:45:06 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+
+11/27 07:45:29 short_dist/dist=warc/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 7220 ms, Recursive Iterations: 1426 ms, Compile RamSQL: 2283 ms, Execution (Collect): 6624 ms, Total: 16219 ms, Result Size: 71
+
+11/30 13:17:10 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 2212 ms, Compile Datalog: 624 ms, Recursive Iterations: 453 ms, Execution (Collect): 2821 ms, Total: 5664 ms, Result Size: 1
+
+11/30 13:25:08 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 2209 ms
+
+11/30 13:26:22 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 2103 ms, Recursive Iterations: 399 ms, Compile RamSQL: 759 ms, Execution (Collect): 2313 ms, Total: 5213 ms, Result Size: 10
+
+11/30 13:28:34 strong_comp/dist=strong_comp/codegen=true/partitions=3/joinType=ShuffleHashJoin/fixpointTask=false/output=query/test_out/log=error
+Load: 1881 ms, Recursive Iterations: 456 ms, Compile RamSQL: 804 ms, Execution (Collect): 2192 ms, Total: 4917 ms, Result Size: 10

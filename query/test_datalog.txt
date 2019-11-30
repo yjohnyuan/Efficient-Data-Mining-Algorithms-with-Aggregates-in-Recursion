@@ -1,0 +1,6 @@
+== datalog suite ==
+//tc_ll: -arc=testdata/arc.csv
+//reach: -rc=testdata/rc1.csv -startvertex=1
+//short_dist: -dist=testdata/warc.csv
+//single_short: -dist=testdata/warc.csv  -startvertex=1
+strong_comp: -dist=testdata/strong_comp.csv

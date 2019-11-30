@@ -1,0 +1,14 @@
+-- hint: shuffle
+
+database({
+  dist(X: integer, Y: integer, D: integer)
+}).
+
+reach(B) <- B={startvertex}.
+path(X,Y,D) <- dist(X,Y,D), reach(X).
+path(X,Y,D3) <- path(X,Z,D1), path(Z,Y,D2), D3=D1+D2.
+min_path(Y,D) <- path(X,Y,D).
+
+query min_path(Y,D).
+
+
